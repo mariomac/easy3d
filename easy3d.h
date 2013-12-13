@@ -1,6 +1,7 @@
 #ifndef EASY3D_H
 #define EASY3D_H
 
+#include<SDL2/SDL_opengl.h>
 #include<SDL2/SDL.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -14,7 +15,8 @@
 
 typedef struct {
 	int ancho, alto;
-	SDL_Window *id;
+	SDL_Window *wnd;
+	SDL_GLContext glctx;
 	int teclas;
 } tventana;
 
@@ -30,12 +32,36 @@ void abre_ventana() {
 	ventana.teclas = 0;
 	ventana.ancho = 640;
 	ventana.alto = 480;
-	ventana.id = SDL_CreateWindow("Easy3D window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-							 ventana.ancho, ventana.alto, SDL_WINDOW_OPENGL);	
+	ventana.wnd = SDL_CreateWindow("Easy3D window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+							 ventana.ancho, ventana.alto, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+
+	//Create context
+	if( !ventana.wnd ) {
+		printf( "Window could not be created! SDL Error: %s\n", SDL_GetError() );
+		exit(-1);
+	}
+	ventana.glctx = SDL_GL_CreateContext( ventana.wnd );
+	if( ventana.glctx == NULL )
+	{
+		printf( "OpenGL context could not be created! SDL Error: %s\n", SDL_GetError() );
+		exit(-1);
+	}
+	else
+	{
+		//Use Vsync
+		if( SDL_GL_SetSwapInterval( 1 ) < 0 )
+		{
+			fprintf(stderr, "Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError() );
+		}
+
+		//Initialize OpenGL
+		
+	}
+ 
 }
 
 void cierra_ventana() {
-	SDL_DestroyWindow(ventana.id);
+	SDL_DestroyWindow(ventana.wnd);
 	SDL_Quit();
 }
 
@@ -54,10 +80,10 @@ void nuevo_fotograma() {
 				case SDLK_ESCAPE:
 					ventana.teclas &= ~TECLA_ESC;
 					break;
-			}
-		
+			}		
 		}
 	}
+	
 }
 
 int tecla_pulsada(int tecla) {

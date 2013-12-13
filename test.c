@@ -8,5 +8,4 @@ void main() {
 	}
 	
 	cierra_ventana();
-	
 }
