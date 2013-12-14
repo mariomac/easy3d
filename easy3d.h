@@ -3,6 +3,7 @@
 
 #include<SDL2/SDL_opengl.h>
 #include<SDL2/SDL.h>
+#include<GL/gl.h>
 #include<stdio.h>
 #include<stdlib.h>
 
@@ -58,6 +59,7 @@ void abre_ventana() {
 		
 	}
  
+	glEnable(GL_DEPTH_TEST);
 }
 
 void cierra_ventana() {
@@ -67,6 +69,58 @@ void cierra_ventana() {
 
 void nuevo_fotograma() {
 	SDL_Delay((double)(1000.0/FPS));
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+	// Multi-colored side - FRONT
+	 
+glBegin(GL_POLYGON);
+glColor3f(   1.0,  1.0, 1.0 );
+glVertex3f(  0.5, -0.5, 0.5 );
+glVertex3f(  0.5,  0.5, 0.5 );
+glVertex3f( -0.5,  0.5, 0.5 );
+glVertex3f( -0.5, -0.5, 0.5 );
+glEnd();
+ 
+//LADO DERECHO – Lado Morado
+glBegin(GL_POLYGON);
+glColor3f(  1.0,  0.0,  1.0 );
+glVertex3f( 0.5, -0.5, -0.5 );
+glVertex3f( 0.5,  0.5, -0.5 );
+glVertex3f( 0.5,  0.5,  0.5 );
+glVertex3f( 0.5, -0.5,  0.5 );
+glEnd();
+ 
+//LADO IZQUIERDO – Lado Verde
+glBegin(GL_POLYGON);
+glColor3f(   0.0,  1.0,  0.0 );
+glVertex3f( -0.5, -0.5,  0.5 );
+glVertex3f( -0.5,  0.5,  0.5 );
+glVertex3f( -0.5,  0.5, -0.5 );
+glVertex3f( -0.5, -0.5, -0.5 );
+glEnd();
+ 
+//LADO SUPERIOR– Lado Azul
+glBegin(GL_POLYGON);
+glColor3f(   0.0,  0.0,  1.0 );
+glVertex3f(  0.5,  0.5,  0.5 );
+glVertex3f(  0.5,  0.5, -0.5 );
+glVertex3f( -0.5,  0.5, -0.5 );
+glVertex3f( -0.5,  0.5,  0.5 );
+glEnd();
+ 
+//LADO NFERIOR – Lado Rojo
+glBegin(GL_POLYGON);
+glColor3f(   1.0,  0.0,  0.0 );
+glVertex3f(  0.5, -0.5, -0.5 );
+glVertex3f(  0.5, -0.5,  0.5 );
+glVertex3f( -0.5, -0.5,  0.5 );
+glVertex3f( -0.5, -0.5, -0.5 );
+glEnd();
+ 
+glFlush();
+
+
+	SDL_GL_SwapWindow(ventana.wnd);
+
 	SDL_Event event;
 	while(SDL_PollEvent(&event)) {
 		if(event.type == SDL_KEYDOWN) {
@@ -83,6 +137,7 @@ void nuevo_fotograma() {
 			}		
 		}
 	}
+	
 	
 }
 
