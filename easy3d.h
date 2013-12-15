@@ -38,18 +38,19 @@ typedef struct {
 } tventana;
 
 typedef struct {
-    int xtiles, ztiles;
+    int xtiles, ytiles;
     char *tiles;
 } tmapa;
 
 typedef struct {
+    GLuint mlist;
     tmapa mapa;
 } tescenario;
 
 void cubo(double lado, double cx, double cy, double cz);
 
 tventana ventana;
-tescenario esc;
+tescenario esc = { -1 };
 
 void abre_ventana() {
 	stderr = fopen("err.txt","w");
@@ -129,20 +130,19 @@ void nuevo_fotograma() {
 	// Multi-colored side - FRONT
 
     GLfloat lightcol[] = {0.3,0.3,0.3, 0};
+    GLfloat ambient[] = {0.1,0.1,0.1, 0};
 
-//glLightfv(GL_LIGHTn, GL_AMBIENT, color4f );
+glLightfv(GL_LIGHT0, GL_AMBIENT, ambient );
+glLightfv(GL_LIGHT1, GL_AMBIENT, ambient );
 glLightfv(GL_LIGHT0, GL_SPECULAR, lightcol );
 glLightfv(GL_LIGHT1, GL_SPECULAR, lightcol );
 //glLightfv(GL_LIGHTn, GL_SPECULAR, lightcol );
-    GLfloat lightpos[] = {1, 1, 1, 0};
+    GLfloat lightpos[] = {20, 10, 10, 0};
     glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
-    GLfloat lightpos2[] = {-1, 1, 1, 0};
+    GLfloat lightpos2[] = {-20, 10, 10, 0};
     glLightfv(GL_LIGHT1, GL_POSITION, lightpos2);
 
-    cubo(1, 0, -10, 0.5);
-    cubo(2, 10, 0, 1);
-    cubo(3, 0, 10, 1.5);
-    cubo(4, -10, 0, 2);
+    glCallList(esc.mlist);
 
     glFlush();
 
@@ -195,48 +195,12 @@ void cubo(double lado, double cx, double cy, double cz) {
     glPushMatrix();
     glTranslated(cx,cy,cz);
     //frente
-    glBegin(GL_POLYGON);
-        glColor3f(1,0,0);
-        glNormal3f(-1,0,0);
+    glColor3f(1,0,0);
 
-        glVertex3f(n,p,p);
-        glVertex3f(p,p,p);
+    GLUquadric *c = gluNewQuadric();
+    gluSphere(c, lado/2, 3, 3);
+    gluDeleteQuadric(c);
 
-        glVertex3f(p,p,n);
-        glVertex3f(n,p,n);
-
-    glEnd();
-    //atras
-    glBegin(GL_POLYGON);
-        glNormal3f(0,1,0);
-        //glColor3f(1,1,1);
-        glVertex3f(n,n,n);
-
-        glVertex3f(p,n,n);
-        glVertex3f(p,n,p);
-        glVertex3f(n,n,p);
-    glEnd();
-    //lado izdo
-    glBegin(GL_POLYGON);
-        glNormal3f(-1,0,0);
-        //glColor3f(0,0,1);
-        glVertex3f(n,n,p);
-        glVertex3f(n,p,p);
-
-        glVertex3f(n,p,n);
-        glVertex3f(n,n,n);
-    glEnd();
-    //lado dcho
-    glBegin(GL_POLYGON);
-        //glColor3f(1,0,1);
-        glNormal3f(1,0,0);
-        glVertex3f(p,n,n);
-
-        glVertex3f(p,p,n);
-        glVertex3f(p,p,p);
-
-        glVertex3f(p,n,p);
-    glEnd();
     glPopMatrix();
 }
 
@@ -249,10 +213,52 @@ int tecla_pulsada(int tecla) {
 }
 
 void carga_mapa(tmapa m) {
-    int x,y;
+    int x,y; char c;
     esc.mapa.xtiles = m.xtiles;
-    esc.mapa.ztiles = m.ztiles;
-    esc.mapa.tiles = (char*) malloc( esc.mapa.ztiles * esc.mapa.ztiles * sizeof(char));
+    esc.mapa.ytiles = m.ytiles;
+    esc.mapa.tiles = (char*) malloc( esc.mapa.ytiles * esc.mapa.ytiles * sizeof(char));
+
+    if(esc.mlist != -1) {
+        glDeleteLists(esc.mlist,1);
+    }
+    // luego creamos mapa
+    esc.mlist = glGenLists(1);
+    glNewList(esc.mlist,GL_COMPILE);
+
+    // suelo
+    glBegin(GL_POLYGON);
+        glColor3f(0.1,0.8,0.1);
+        glNormal3f(0,0,1);
+        glVertex3f(0,0,0);
+        glVertex3f(m.xtiles,0,0);
+        glVertex3f(m.xtiles,m.ytiles,0);
+        glVertex3f(0,m.ytiles,0);
+    glEnd();
+
+    // calcular alturas mapa
+    for(y = 0 ; y < m.ytiles ; y++) {
+        for(x = 0 ; x < m.xtiles ; x++) {
+            c = m.tiles[y * m.xtiles + x];
+            if(c >= '1' && c <= '9') {
+                esc.mapa.tiles[y * m.xtiles + x] = c - '0';
+            } else {
+                esc.mapa.tiles[y * m.xtiles + x] = 0;
+            }
+        }
+    }
+
+    // generar cubos mapa
+    for(y = 0 ; y < m.ytiles ; y++) {
+        for(x = 0 ; x < m.xtiles ; x++) {
+            c = esc.mapa.tiles[y * m.xtiles + x];
+            if(c>0) {
+                cubo(0.5,x,y,c-0.5);
+            }
+        }
+    }
+
+
+    glEndList();
 
 }
 
