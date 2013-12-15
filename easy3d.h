@@ -37,13 +37,24 @@ typedef struct {
 	int teclas;
 } tventana;
 
+typedef struct {
+    int xtiles, ztiles;
+    char *tiles;
+} tmapa;
+
+typedef struct {
+    tmapa mapa;
+} tescenario;
+
 void cubo(double lado, double cx, double cy, double cz);
 
 tventana ventana;
+tescenario esc;
 
 void abre_ventana() {
 	stderr = fopen("err.txt","w");
-	fprintf(stderr, "ATENCION: este archivo solo esta para pillar algunos mensajes del sistema. Ignoralos si no sabes que quieren decir\n");
+	fprintf(stderr, "ATENCION: este archivo solo esta para pillar algunos mensajes del sistema."
+         " Ignoralos si no sabes que quieren decir\n");
 	if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO) == -1) {
 		fprintf(stderr,"Ocurrio un error al iniciar programa: %s\n",SDL_GetError());
 		exit(-1);
@@ -81,10 +92,18 @@ void abre_ventana() {
     glViewport(0,0, ventana.ancho, ventana.alto);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(FOVY, (double)ventana.ancho/(double)ventana.alto, 0.1, ZFAR);
+    gluPerspective(FOVY, (double)-ventana.ancho/(double)ventana.alto, 0.1, ZFAR);
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
+
+    // Enable lighting
+    glEnable(GL_LIGHTING);
+    glEnable(GL_COLOR_MATERIAL);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+
 
 	//glOrtho(-4, 4, -0.5, 4, 0.1, 1000.0);
 	glMatrixMode(GL_MODELVIEW);
@@ -94,6 +113,7 @@ void abre_ventana() {
 void cierra_ventana() {
 	SDL_DestroyWindow(ventana.wnd);
 	SDL_Quit();
+	free(esc.mapa.tiles);
 }
 
 void nuevo_fotograma() {
@@ -103,18 +123,28 @@ void nuevo_fotograma() {
 
 	gluLookAt(ventana.cam.posX, ventana.cam.posY, ventana.cam.posZ,
            ventana.cam.posX + sin(ventana.cam.anguloX),
-           ventana.cam.posY,
-           ventana.cam.posZ - cos(ventana.cam.anguloX),
-           0,1,0);
+           ventana.cam.posY - cos(ventana.cam.anguloX),
+           ventana.cam.posZ,
+           0,0,1);
 	// Multi-colored side - FRONT
 
-    cubo(1, 0, 2, -3);
-    cubo(2, 3, 2, 0);
+    GLfloat lightcol[] = {0.3,0.3,0.3, 0};
 
+//glLightfv(GL_LIGHTn, GL_AMBIENT, color4f );
+glLightfv(GL_LIGHT0, GL_SPECULAR, lightcol );
+glLightfv(GL_LIGHT1, GL_SPECULAR, lightcol );
+//glLightfv(GL_LIGHTn, GL_SPECULAR, lightcol );
+    GLfloat lightpos[] = {1, 1, 1, 0};
+    glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
+    GLfloat lightpos2[] = {-1, 1, 1, 0};
+    glLightfv(GL_LIGHT1, GL_POSITION, lightpos2);
 
+    cubo(1, 0, -10, 0.5);
+    cubo(2, 10, 0, 1);
+    cubo(3, 0, 10, 1.5);
+    cubo(4, -10, 0, 2);
 
     glFlush();
-
 
 	SDL_GL_SwapWindow(ventana.wnd);
 
@@ -161,42 +191,51 @@ void nuevo_fotograma() {
 }
 
 void cubo(double lado, double cx, double cy, double cz) {
-    double nx = cx-lado/2.0, px = cx+lado/2.0,
-            ny = cy-lado/2.0, py = cy+lado/2.0,
-            nz = cz-lado/2.0, pz = cz+lado/2.0;
+    double n = -lado/2.0, p = lado/2.0;
     glPushMatrix();
     glTranslated(cx,cy,cz);
     //frente
     glBegin(GL_POLYGON);
         glColor3f(1,0,0);
-        glVertex3f(nx,py,pz);
-        glVertex3f(px,py,pz);
-        glVertex3f(px,ny,pz);
-        glVertex3f(nx,ny,pz);
+        glNormal3f(-1,0,0);
+
+        glVertex3f(n,p,p);
+        glVertex3f(p,p,p);
+
+        glVertex3f(p,p,n);
+        glVertex3f(n,p,n);
+
     glEnd();
     //atras
     glBegin(GL_POLYGON);
-        glColor3f(1,1,1);
-        glVertex3f(nx,ny,nz);
-        glVertex3f(px,ny,nz);
-        glVertex3f(px,py,nz);
-        glVertex3f(nx,py,nz);
+        glNormal3f(0,1,0);
+        //glColor3f(1,1,1);
+        glVertex3f(n,n,n);
+
+        glVertex3f(p,n,n);
+        glVertex3f(p,n,p);
+        glVertex3f(n,n,p);
     glEnd();
     //lado izdo
     glBegin(GL_POLYGON);
-        glColor3f(0,0,1);
-        glVertex3f(nx,py,nz);
-        glVertex3f(nx,py,pz);
-        glVertex3f(nx,ny,pz);
-        glVertex3f(nx,ny,nz);
+        glNormal3f(-1,0,0);
+        //glColor3f(0,0,1);
+        glVertex3f(n,n,p);
+        glVertex3f(n,p,p);
+
+        glVertex3f(n,p,n);
+        glVertex3f(n,n,n);
     glEnd();
     //lado dcho
     glBegin(GL_POLYGON);
-        glColor3f(1,0,1);
-        glVertex3f(px,ny,nz);
-        glVertex3f(px,ny,pz);
-        glVertex3f(px,py,pz);
-        glVertex3f(px,py,nz);
+        //glColor3f(1,0,1);
+        glNormal3f(1,0,0);
+        glVertex3f(p,n,n);
+
+        glVertex3f(p,p,n);
+        glVertex3f(p,p,p);
+
+        glVertex3f(p,n,p);
     glEnd();
     glPopMatrix();
 }
@@ -207,6 +246,14 @@ void actualiza_camara(tcamara cam) {
 
 int tecla_pulsada(int tecla) {
 	return ventana.teclas & tecla;
+}
+
+void carga_mapa(tmapa m) {
+    int x,y;
+    esc.mapa.xtiles = m.xtiles;
+    esc.mapa.ztiles = m.ztiles;
+    esc.mapa.tiles = (char*) malloc( esc.mapa.ztiles * esc.mapa.ztiles * sizeof(char));
+
 }
 
 #endif
