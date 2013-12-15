@@ -24,6 +24,8 @@
 #define TECLA_IZDA 8
 #define TECLA_DCHA 16
 
+#define TAM_TILE 1.0
+
 typedef struct {
     double posX,posY,posZ;
     double anguloX;
@@ -212,8 +214,19 @@ int tecla_pulsada(int tecla) {
 	return ventana.teclas & tecla;
 }
 
+double get_altura_terreno(double x, double y) {
+    int xx = (int) x;
+    int yy = (int) y;
+    if(xx >= 0 && xx < esc.mapa.xtiles && yy >= 0 && yy < esc.mapa.ytiles) {
+        return esc.mapa.tiles[yy * esc.mapa.xtiles + xx];
+    } else {
+        return 0;
+    }
+}
+
 void carga_mapa(tmapa m) {
     int x,y; char c;
+    double t,o;
     esc.mapa.xtiles = m.xtiles;
     esc.mapa.ytiles = m.ytiles;
     esc.mapa.tiles = (char*) malloc( esc.mapa.ytiles * esc.mapa.ytiles * sizeof(char));
@@ -250,13 +263,68 @@ void carga_mapa(tmapa m) {
     // generar cubos mapa
     for(y = 0 ; y < m.ytiles ; y++) {
         for(x = 0 ; x < m.xtiles ; x++) {
-            c = esc.mapa.tiles[y * m.xtiles + x];
-            if(c>0) {
-                cubo(0.5,x,y,c-0.5);
+            t = get_altura_terreno(x,y);
+            if(t>0) {
+                // top
+                glBegin(GL_POLYGON);
+                    glColor3f(0.1,0.8,0.1);
+                    glNormal3f(0,0,1);
+                    glVertex3f(x,y,t);
+                    glVertex3f(x+TAM_TILE,y,t);
+                    glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+                    glVertex3f(x,y+TAM_TILE,t);
+                glEnd();
+                // left
+                o = get_altura_terreno(x-1,y);
+                if(o < t) {
+                    glBegin(GL_POLYGON);
+                        glColor3f(0.7,0.2,0.2);
+                        glNormal3f(-1,0,0);
+                        glVertex3f(x,y,t);
+                        glVertex3f(x,y+TAM_TILE,t);
+                        glVertex3f(x,y+TAM_TILE,o);
+                        glVertex3f(x,y,o);
+                    glEnd();
+                }
+                // front
+                o = get_altura_terreno(x,y+1);
+                if(o < t) {
+                    glBegin(GL_POLYGON);
+                        glColor3f(0.7,0.2,0.2);
+                        glNormal3f(0,1,0);
+                        glVertex3f(x,y+TAM_TILE,t);
+                        glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+                        glVertex3f(x+TAM_TILE,y+TAM_TILE,o);
+                        glVertex3f(x,y+TAM_TILE,o);
+                    glEnd();
+                }
+                // right
+                o = get_altura_terreno(x+1,y);
+                if(o < t) {
+                    glBegin(GL_POLYGON);
+                        glColor3f(0.7,0.2,0.2);
+                        glNormal3f(1,0,0);
+                        glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+                        glVertex3f(x+TAM_TILE,y,t);
+                        glVertex3f(x+TAM_TILE,y,o);
+                        glVertex3f(x+TAM_TILE,y+TAM_TILE,o);
+                    glEnd();
+                }
+                // back
+                o = get_altura_terreno(x,y-1);
+                if(o < t) {
+                    glBegin(GL_POLYGON);
+                        glColor3f(0.7,0.2,0.2);
+                        glNormal3f(0,-1,0);
+                        glVertex3f(x+TAM_TILE,y,t);
+                        glVertex3f(x,y,t);
+                        glVertex3f(x,y,o);
+                        glVertex3f(x+TAM_TILE,y,o);
+                    glEnd();
+                }
             }
         }
     }
-
 
     glEndList();
 
