@@ -4,6 +4,7 @@
 #include<SDL2/SDL_opengl.h>
 #include<SDL2/SDL.h>
 #include<GL/gl.h>
+#include<GL/glu.h>
 #include<stdio.h>
 #include<stdlib.h>
 
@@ -56,10 +57,18 @@ void abre_ventana() {
 		}
 
 		//Initialize OpenGL
-		
+
 	}
- 
+
 	glEnable(GL_DEPTH_TEST);
+    glViewport(0,0, ventana.ancho, ventana.alto);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(60.0, (double)ventana.ancho/(double)ventana.alto, 0.1, 10.0);
+
+	//glOrtho(-4, 4, -0.5, 4, 0.1, 1000.0);
+	glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
 }
 
 void cierra_ventana() {
@@ -67,11 +76,18 @@ void cierra_ventana() {
 	SDL_Quit();
 }
 
+double angle = 0;
 void nuevo_fotograma() {
 	SDL_Delay((double)(1000.0/FPS));
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+
+	gluLookAt(3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 	// Multi-colored side - FRONT
-	 
+
+	angle+=1;
+	glRotated(angle,0,0,1);
+
 glBegin(GL_POLYGON);
 glColor3f(   1.0,  1.0, 1.0 );
 glVertex3f(  0.5, -0.5, 0.5 );
@@ -79,7 +95,7 @@ glVertex3f(  0.5,  0.5, 0.5 );
 glVertex3f( -0.5,  0.5, 0.5 );
 glVertex3f( -0.5, -0.5, 0.5 );
 glEnd();
- 
+
 //LADO DERECHO – Lado Morado
 glBegin(GL_POLYGON);
 glColor3f(  1.0,  0.0,  1.0 );
@@ -88,7 +104,7 @@ glVertex3f( 0.5,  0.5, -0.5 );
 glVertex3f( 0.5,  0.5,  0.5 );
 glVertex3f( 0.5, -0.5,  0.5 );
 glEnd();
- 
+
 //LADO IZQUIERDO – Lado Verde
 glBegin(GL_POLYGON);
 glColor3f(   0.0,  1.0,  0.0 );
@@ -97,7 +113,7 @@ glVertex3f( -0.5,  0.5,  0.5 );
 glVertex3f( -0.5,  0.5, -0.5 );
 glVertex3f( -0.5, -0.5, -0.5 );
 glEnd();
- 
+
 //LADO SUPERIOR– Lado Azul
 glBegin(GL_POLYGON);
 glColor3f(   0.0,  0.0,  1.0 );
@@ -106,7 +122,7 @@ glVertex3f(  0.5,  0.5, -0.5 );
 glVertex3f( -0.5,  0.5, -0.5 );
 glVertex3f( -0.5,  0.5,  0.5 );
 glEnd();
- 
+
 //LADO NFERIOR – Lado Rojo
 glBegin(GL_POLYGON);
 glColor3f(   1.0,  0.0,  0.0 );
@@ -115,7 +131,7 @@ glVertex3f(  0.5, -0.5,  0.5 );
 glVertex3f( -0.5, -0.5,  0.5 );
 glVertex3f( -0.5, -0.5, -0.5 );
 glEnd();
- 
+
 glFlush();
 
 
@@ -134,11 +150,11 @@ glFlush();
 				case SDLK_ESCAPE:
 					ventana.teclas &= ~TECLA_ESC;
 					break;
-			}		
+			}
 		}
 	}
-	
-	
+
+
 }
 
 int tecla_pulsada(int tecla) {
