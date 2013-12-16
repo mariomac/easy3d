@@ -225,6 +225,7 @@ double get_altura_terreno(double x, double y) {
 }
 
 void carga_mapa(tmapa m) {
+	GLuint texture;
     int x,y; char c;
     double t,o;
     esc.mapa.xtiles = m.xtiles;
@@ -259,21 +260,55 @@ void carga_mapa(tmapa m) {
             }
         }
     }
+    
+    //generar texturas
+    int width = 8;
+    int height = 8;
+    unsigned int data[8*8] = {
+    			00,00,00,-1,-1,00,00,00,
+    			00,00,-1,-1,-1,-1,00,00,
+    			00,-1,00,-1,-1,00,-1,00,
+    			-1,00,00,-1,-1,00,00,-1,
+    			00,00,00,-1,-1,00,00,00,
+    			00,00,00,-1,-1,00,00,00,
+    			00,00,00,-1,-1,00,00,00,
+    			00,00,00,-1,-1,00,00,00,
+    		};
+    int wrap = 1;
+    glGenTextures(1,&texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //if wrap == true, the texture repeats, else clamp
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ? GL_REPEAT : GL_CLAMP);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ? GL_REPEAT : GL_CLAMP);
+    
+    gluBuild2DMipmaps(GL_TEXTURE_2D, 4, width, height, GL_RGB, GL_UNSIGNED_BYTE, data);
 
+	
+      
     // generar cubos mapa
     for(y = 0 ; y < m.ytiles ; y++) {
         for(x = 0 ; x < m.xtiles ; x++) {
             t = get_altura_terreno(x,y);
             if(t>0) {
                 // top
+                glEnable( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, texture );
                 glBegin(GL_POLYGON);
                     glColor3f(0.1,0.8,0.1);
                     glNormal3f(0,0,1);
+                    glTexCoord2d(0,1);
                     glVertex3f(x,y,t);
+                    glTexCoord2d(1,1);
                     glVertex3f(x+TAM_TILE,y,t);
+                    glTexCoord2d(1,0);
                     glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+                    glTexCoord2d(0,0);
                     glVertex3f(x,y+TAM_TILE,t);
                 glEnd();
+                glDisable(GL_TEXTURE_2D);
                 // left
                 o = get_altura_terreno(x-1,y);
                 if(o < t) {
@@ -325,6 +360,8 @@ void carga_mapa(tmapa m) {
             }
         }
     }
+    
+    glDeleteTextures(1,&texture);
 
     glEndList();
 
