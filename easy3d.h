@@ -225,7 +225,7 @@ double get_altura_terreno(double x, double y) {
 }
 
 void carga_mapa(tmapa m) {
-	GLuint texture;
+	GLuint herbTex, sandTex;
     int x,y; char c;
     double t,o;
     esc.mapa.xtiles = m.xtiles;
@@ -239,15 +239,7 @@ void carga_mapa(tmapa m) {
     esc.mlist = glGenLists(1);
     glNewList(esc.mlist,GL_COMPILE);
 
-    // suelo
-    glBegin(GL_POLYGON);
-        glColor3f(0.1,0.8,0.1);
-        glNormal3f(0,0,1);
-        glVertex3f(0,0,0);
-        glVertex3f(m.xtiles,0,0);
-        glVertex3f(m.xtiles,m.ytiles,0);
-        glVertex3f(0,m.ytiles,0);
-    glEnd();
+    
 
     // calcular alturas mapa
     for(y = 0 ; y < m.ytiles ; y++) {
@@ -262,32 +254,59 @@ void carga_mapa(tmapa m) {
     }
     
     //generar texturas
+    
+    
     int width = 8;
     int height = 8;
-    unsigned int data[8*8] = {
-    			00,00,00,-1,-1,00,00,00,
-    			00,00,-1,-1,-1,-1,00,00,
-    			00,-1,00,-1,-1,00,-1,00,
-    			-1,00,00,-1,-1,00,00,-1,
-    			00,00,00,-1,-1,00,00,00,
-    			00,00,00,-1,-1,00,00,00,
-    			00,00,00,-1,-1,00,00,00,
-    			00,00,00,-1,-1,00,00,00,
-    		};
-    int wrap = 1;
-    glGenTextures(1,&texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    unsigned short herb[] = {
+    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
+    	0x800,0x800,0x800,0x800,0x800,0xf00,0x800,0x800,
+    	0x800,0xf00,0x800,0x800,0x800,0x800,0x800,0x800,
+    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
+    	0x800,0x800,0x800,0xf00,0x800,0x800,0xf00,0x800,
+    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
+    	0x800,0x800,0x800,0x800,0x800,0xf00,0x800,0x800,
+    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
+    };
+    glGenTextures(1,&herbTex);
+    glBindTexture(GL_TEXTURE_2D, herbTex);  
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //if wrap == true, the texture repeats, else clamp
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ? GL_REPEAT : GL_CLAMP);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap ? GL_REPEAT : GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);   
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, herb);
+
+    unsigned short sand[] = {
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,    	
+    };
     
-    gluBuild2DMipmaps(GL_TEXTURE_2D, 4, width, height, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenTextures(1,&sandTex);
+    glBindTexture(GL_TEXTURE_2D, sandTex);  
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);   
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, sand);
 
 	
-      
+    glColor3f(1,1,1);      
+	// suelo
+                glEnable( GL_TEXTURE_2D );
+    			glBindTexture( GL_TEXTURE_2D, herbTex );
+
+    glBegin(GL_POLYGON);
+        glNormal3f(0,0,1);
+        glTexCoord2d(0,0); 			glVertex3f(0,0,0);
+        glTexCoord2d(m.xtiles,0);	glVertex3f(m.xtiles,0,0);
+        glTexCoord2d(m.xtiles, m.ytiles); glVertex3f(m.xtiles,m.ytiles,0);
+        glTexCoord2d(0,m.ytiles);	glVertex3f(0,m.ytiles,0);
+    glEnd();
+    
     // generar cubos mapa
     for(y = 0 ; y < m.ytiles ; y++) {
         for(x = 0 ; x < m.xtiles ; x++) {
@@ -295,41 +314,50 @@ void carga_mapa(tmapa m) {
             if(t>0) {
                 // top
                 glEnable( GL_TEXTURE_2D );
-    glBindTexture( GL_TEXTURE_2D, texture );
+    			glBindTexture( GL_TEXTURE_2D, herbTex );
                 glBegin(GL_POLYGON);
-                    glColor3f(0.1,0.8,0.1);
+
                     glNormal3f(0,0,1);
-                    glTexCoord2d(0,1);
-                    glVertex3f(x,y,t);
-                    glTexCoord2d(1,1);
-                    glVertex3f(x+TAM_TILE,y,t);
-                    glTexCoord2d(1,0);
-                    glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
                     glTexCoord2d(0,0);
+                    glVertex3f(x,y,t);
+                    glTexCoord2d(1,0);
+                    glVertex3f(x+TAM_TILE,y,t);
+                    glTexCoord2d(1,1);
+                    glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+                    glTexCoord2d(0,1);
                     glVertex3f(x,y+TAM_TILE,t);
                 glEnd();
-                glDisable(GL_TEXTURE_2D);
                 // left
                 o = get_altura_terreno(x-1,y);
                 if(o < t) {
+                glEnable( GL_TEXTURE_2D );
+    			glBindTexture( GL_TEXTURE_2D, sandTex );
                     glBegin(GL_POLYGON);
-                        glColor3f(0.7,0.2,0.2);
                         glNormal3f(-1,0,0);
+                        glTexCoord2d(0,0);
                         glVertex3f(x,y,t);
+                        glTexCoord2d(1,0);
                         glVertex3f(x,y+TAM_TILE,t);
+                        glTexCoord2d(1,1*(t-o));
                         glVertex3f(x,y+TAM_TILE,o);
+                        glTexCoord2d(0,1*(t-o));
                         glVertex3f(x,y,o);
                     glEnd();
                 }
                 // front
                 o = get_altura_terreno(x,y+1);
                 if(o < t) {
+                glEnable( GL_TEXTURE_2D );
+    			glBindTexture( GL_TEXTURE_2D, sandTex );
                     glBegin(GL_POLYGON);
-                        glColor3f(0.7,0.2,0.2);
                         glNormal3f(0,1,0);
+                        glTexCoord2d(0,0);
                         glVertex3f(x,y+TAM_TILE,t);
+                        glTexCoord2d(1,0);
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+                        glTexCoord2d(1,1*(t-o));
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,o);
+                        glTexCoord2d(0,1*(t-o));
                         glVertex3f(x,y+TAM_TILE,o);
                     glEnd();
                 }
@@ -337,11 +365,14 @@ void carga_mapa(tmapa m) {
                 o = get_altura_terreno(x+1,y);
                 if(o < t) {
                     glBegin(GL_POLYGON);
-                        glColor3f(0.7,0.2,0.2);
                         glNormal3f(1,0,0);
+                        glTexCoord2d(0,0);
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+                        glTexCoord2d(1,0);
                         glVertex3f(x+TAM_TILE,y,t);
+                        glTexCoord2d(1,1*(t-o));
                         glVertex3f(x+TAM_TILE,y,o);
+                        glTexCoord2d(0,1*(t-o));
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,o);
                     glEnd();
                 }
@@ -349,11 +380,15 @@ void carga_mapa(tmapa m) {
                 o = get_altura_terreno(x,y-1);
                 if(o < t) {
                     glBegin(GL_POLYGON);
-                        glColor3f(0.7,0.2,0.2);
                         glNormal3f(0,-1,0);
+                        glTexCoord2d(0,0);
                         glVertex3f(x+TAM_TILE,y,t);
+                        
+                        glTexCoord2d(1,0);
                         glVertex3f(x,y,t);
+                        glTexCoord2d(1,1*(t-o));
                         glVertex3f(x,y,o);
+                        glTexCoord2d(0,1*(t-o));
                         glVertex3f(x+TAM_TILE,y,o);
                     glEnd();
                 }
@@ -361,8 +396,8 @@ void carga_mapa(tmapa m) {
         }
     }
     
-    glDeleteTextures(1,&texture);
-
+    glDeleteTextures(1,&herbTex);
+	glDeleteTextures(1,&sandTex);
     glEndList();
 
 }
