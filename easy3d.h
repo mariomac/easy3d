@@ -9,9 +9,6 @@
 #include<stdlib.h>
 #include<math.h>
 
-#define PULSADO 1
-#define SUELTO 0
-
 #define ZNEAR 1
 #define ZFAR 200
 #define FOVY 60
@@ -41,7 +38,7 @@ typedef struct {
 
 typedef struct {
     int xtiles, ytiles;
-    char *tiles;
+    double *alturas;
 } tmapa;
 
 typedef struct {
@@ -116,7 +113,7 @@ void abre_ventana() {
 void cierra_ventana() {
 	SDL_DestroyWindow(ventana.wnd);
 	SDL_Quit();
-	free(esc.mapa.tiles);
+	free(esc.mapa.alturas);
 }
 
 void nuevo_fotograma() {
@@ -218,19 +215,60 @@ double get_altura_terreno(double x, double y) {
     int xx = (int) x;
     int yy = (int) y;
     if(xx >= 0 && xx < esc.mapa.xtiles && yy >= 0 && yy < esc.mapa.ytiles) {
-        return esc.mapa.tiles[yy * esc.mapa.xtiles + xx];
+        return esc.mapa.alturas[yy * esc.mapa.xtiles + xx];
     } else {
         return 0;
     }
 }
 
-void carga_mapa(tmapa m) {
+#define DIV_ALT_MAX 20.0
+#define PEND_MONT 1
+void pon_montanya(int x, int y, int tamX, int tamY, double alt, double *alturas) {
+    if(alt > 0 && x >= 0 && y >= 0 && x < tamX && y < tamY) {
+        if(alturas[x+y*tamX]<alt) {
+            alturas[x+y*tamX]=alt;
+            if(rand()%3>0) pon_montanya(x-1,y,tamX,tamY,alt-PEND_MONT,alturas);
+            if(rand()%3>0) pon_montanya(x+1,y,tamX,tamY,alt-PEND_MONT,alturas);
+            if(rand()%3>0) pon_montanya(x,y+1,tamX,tamY,alt-PEND_MONT,alturas);
+            if(rand()%3>0) pon_montanya(x,y-1,tamX,tamY,alt-PEND_MONT,alturas);
+        }
+    }
+}
+
+void genera_mapa(int tamX, int tamY, int montanyas) {
 	GLuint herbTex, sandTex;
-    int x,y; char c;
+    int x,y,i; char c;
     double t,o;
-    esc.mapa.xtiles = m.xtiles;
-    esc.mapa.ytiles = m.ytiles;
-    esc.mapa.tiles = (char*) malloc( esc.mapa.ytiles * esc.mapa.ytiles * sizeof(char));
+    esc.mapa.xtiles = tamX;
+    esc.mapa.ytiles = tamY;
+    esc.mapa.alturas = (double*) malloc( tamX * tamY * sizeof(double));
+    int mx, my; double malt;
+    // poner mapa a 0
+    for(x = 0 ; x < tamX*tamY; x++) {
+        esc.mapa.alturas[x] = 0;
+    }
+    srand(montanyas);
+    // genera montañas aleatoriamente
+    for(i = 0 ; i < montanyas ; i++) {
+        mx = rand() % tamX; my = rand() % tamY;
+        malt = rand() % (int)((tamX+tamY)/DIV_ALT_MAX);
+        pon_montanya(mx,my,tamX,tamY,malt,esc.mapa.alturas);
+
+    }
+
+
+    // calcular alturas mapa
+ /*   for(y = 0 ; y < m.ytiles ; y++) {
+        for(x = 0 ; x < m.xtiles ; x++) {
+            c = m.tiles[y * m.xtiles + x];
+            if(c >= '1' && c <= '9') {
+                esc.mapa.alturas[y * m.xtiles + x] = c - '0';
+            } else {
+                esc.mapa.alturas[y * m.xtiles + x] = 0;
+            }
+        }
+    }
+*/
 
     if(esc.mlist != -1) {
         glDeleteLists(esc.mlist,1);
@@ -239,23 +277,8 @@ void carga_mapa(tmapa m) {
     esc.mlist = glGenLists(1);
     glNewList(esc.mlist,GL_COMPILE);
 
-    
 
-    // calcular alturas mapa
-    for(y = 0 ; y < m.ytiles ; y++) {
-        for(x = 0 ; x < m.xtiles ; x++) {
-            c = m.tiles[y * m.xtiles + x];
-            if(c >= '1' && c <= '9') {
-                esc.mapa.tiles[y * m.xtiles + x] = c - '0';
-            } else {
-                esc.mapa.tiles[y * m.xtiles + x] = 0;
-            }
-        }
-    }
-    
     //generar texturas
-    
-    
     int width = 8;
     int height = 8;
     unsigned short herb[] = {
@@ -269,32 +292,32 @@ void carga_mapa(tmapa m) {
     	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
     };
     glGenTextures(1,&herbTex);
-    glBindTexture(GL_TEXTURE_2D, herbTex);  
+    glBindTexture(GL_TEXTURE_2D, herbTex);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);   
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, herb);
 
     unsigned short sand[] = {
     	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xa610,0xda50,0xda50,0xa610,0xda50,0xda50,0xda50,
     	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
     	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xa610,0xda50,0xda50,0xda50,0xda50,
+    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xa610,0xda50,
     	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
     	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,    	
     };
-    
+
     glGenTextures(1,&sandTex);
-    glBindTexture(GL_TEXTURE_2D, sandTex);  
+    glBindTexture(GL_TEXTURE_2D, sandTex);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);   
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, sand);
 
-	
-    glColor3f(1,1,1);      
+
+    glColor3f(1,1,1);
 	// suelo
                 glEnable( GL_TEXTURE_2D );
     			glBindTexture( GL_TEXTURE_2D, herbTex );
@@ -302,14 +325,14 @@ void carga_mapa(tmapa m) {
     glBegin(GL_POLYGON);
         glNormal3f(0,0,1);
         glTexCoord2d(0,0); 			glVertex3f(0,0,0);
-        glTexCoord2d(m.xtiles,0);	glVertex3f(m.xtiles,0,0);
-        glTexCoord2d(m.xtiles, m.ytiles); glVertex3f(m.xtiles,m.ytiles,0);
-        glTexCoord2d(0,m.ytiles);	glVertex3f(0,m.ytiles,0);
+        glTexCoord2d(tamX,0);	glVertex3f(tamX,0,0);
+        glTexCoord2d(tamX,tamY); glVertex3f(tamX,tamY,0);
+        glTexCoord2d(0,tamY);	glVertex3f(0,tamY,0);
     glEnd();
-    
+
     // generar cubos mapa
-    for(y = 0 ; y < m.ytiles ; y++) {
-        for(x = 0 ; x < m.xtiles ; x++) {
+    for(y = 0 ; y < tamY ; y++) {
+        for(x = 0 ; x < tamX ; x++) {
             t = get_altura_terreno(x,y);
             if(t>0) {
                 // top
@@ -364,6 +387,8 @@ void carga_mapa(tmapa m) {
                 // right
                 o = get_altura_terreno(x+1,y);
                 if(o < t) {
+                glEnable( GL_TEXTURE_2D );
+    			glBindTexture( GL_TEXTURE_2D, sandTex );
                     glBegin(GL_POLYGON);
                         glNormal3f(1,0,0);
                         glTexCoord2d(0,0);
@@ -379,11 +404,13 @@ void carga_mapa(tmapa m) {
                 // back
                 o = get_altura_terreno(x,y-1);
                 if(o < t) {
+                glEnable( GL_TEXTURE_2D );
+    			glBindTexture( GL_TEXTURE_2D, sandTex );
                     glBegin(GL_POLYGON);
                         glNormal3f(0,-1,0);
                         glTexCoord2d(0,0);
                         glVertex3f(x+TAM_TILE,y,t);
-                        
+
                         glTexCoord2d(1,0);
                         glVertex3f(x,y,t);
                         glTexCoord2d(1,1*(t-o));
@@ -395,7 +422,7 @@ void carga_mapa(tmapa m) {
             }
         }
     }
-    
+
     glDeleteTextures(1,&herbTex);
 	glDeleteTextures(1,&sandTex);
     glEndList();

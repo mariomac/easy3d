@@ -6,23 +6,10 @@
 
 
 void main() {
-    tmapa map = {
-        10,10,
-        "      1233"
-        "     12344"
-        "     12233"
-        "      1222"
-        "       111"
-        " 88       "
-        " 88       "
-        "      9   "
-        "          "
-        "          "
-    };
-	tcamara cam = {5, 5, ALTURA_OJOS, 0 };
 
+	tcamara cam = {50, 50, ALTURA_OJOS, 3.1416};
 	abre_ventana();
-	carga_mapa(map);
+	genera_mapa(100,100,10);
 
 	while(!tecla_pulsada(TECLA_ESC)) {
         if(tecla_pulsada(TECLA_IZDA)) {
