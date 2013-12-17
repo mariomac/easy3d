@@ -8,12 +8,13 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
+#include<time.h>
 
 #define ZNEAR 1
 #define ZFAR 200
 #define FOVY 60
 
-#define FPS 60.0
+#define FPS 30.0
 
 #define TECLA_ESC 0b1
 #define TECLA_ARRIBA 2
@@ -53,7 +54,7 @@ tventana ventana;
 tescenario esc = { -1 };
 
 void abre_ventana() {
-	stderr = fopen("err.txt","w");
+	//stderr = fopen("err.txt","w");
 	fprintf(stderr, "ATENCION: este archivo solo esta para pillar algunos mensajes del sistema."
          " Ignoralos si no sabes que quieren decir\n");
 	if(SDL_Init(SDL_INIT_TIMER|SDL_INIT_VIDEO) == -1) {
@@ -118,8 +119,20 @@ void cierra_ventana() {
 	free(esc.mapa.alturas);
 }
 
+struct timespec startFrameTime = {0,0};
 void nuevo_fotograma() {
-	SDL_Delay((double)(1000.0/FPS));
+    long difMilis, difseconds;
+    struct timespec now;
+    clock_gettime(CLOCK_BOOTTIME,&now);
+    difseconds = (now.tv_sec - startFrameTime.tv_sec);    
+    difMilis = difseconds*1000 + (long)(now.tv_nsec - startFrameTime.tv_nsec) / 1000000L; // convert to ms
+    printf("%ld\n", difMilis);
+    if(difMilis >= 0 && difMilis < 1000.0/FPS) {
+	SDL_Delay((1000.0/FPS));//-difNanos);
+    }
+    clock_gettime(CLOCK_BOOTTIME,&startFrameTime);
+    
+    
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
@@ -220,20 +233,6 @@ double get_altura_terreno(double x, double y) {
         return esc.mapa.alturas[yy * esc.mapa.xtiles + xx];
     } else {
         return 0;
-    }
-}
-
-#define DIV_ALT_MAX 20.0
-#define PEND_MONT 1
-void pon_montanya(int x, int y, int tamX, int tamY, double alt, double *alturas) {
-    if(alt > 0 && x >= 0 && y >= 0 && x < tamX && y < tamY) {
-        if(alturas[x+y*tamX]<alt) {
-            alturas[x+y*tamX]=alt;
-            if(rand()%3>0) pon_montanya(x-1,y,tamX,tamY,alt-PEND_MONT,alturas);
-            if(rand()%3>0) pon_montanya(x+1,y,tamX,tamY,alt-PEND_MONT,alturas);
-            if(rand()%3>0) pon_montanya(x,y+1,tamX,tamY,alt-PEND_MONT,alturas);
-            if(rand()%3>0) pon_montanya(x,y-1,tamX,tamY,alt-PEND_MONT,alturas);
-        }
     }
 }
 
