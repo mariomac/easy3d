@@ -2,14 +2,23 @@
 
 #define VELOCIDAD 0.25
 #define VROTACION 0.11
-#define ALTURA_OJOS 1.8
 
 
 void main() {
 
-	tcamara cam = {50, 50, ALTURA_OJOS, 3.1416};
+	tcamara cam;
 	abre_ventana();
-	genera_mapa(100,100,10);
+	cam = genera_mapa(10,10,
+                " ######## "
+                "#        #"
+                "#  ####  #"
+                "####    # "
+                "#c#  ###  "
+                "# # ####  "
+                "# #     # "
+                "#  ###   #"
+                "#        #"
+                " ######## ");
 
 	while(!tecla_pulsada(TECLA_ESC)) {
         if(tecla_pulsada(TECLA_IZDA)) {

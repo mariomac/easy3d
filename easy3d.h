@@ -22,6 +22,7 @@
 #define TECLA_DCHA 16
 
 #define TAM_TILE 1.0
+#define ALTURA_OJOS 1.8
 
 typedef struct {
     double posX,posY,posZ;
@@ -85,6 +86,7 @@ void abre_ventana() {
 		}
 
 		//Initialize OpenGL
+                
 
 	}
 
@@ -235,27 +237,55 @@ void pon_montanya(int x, int y, int tamX, int tamY, double alt, double *alturas)
     }
 }
 
-void genera_mapa(int tamX, int tamY, int montanyas) {
-	GLuint herbTex, sandTex;
-    int x,y,i; char c;
+/* las tiles multiplican por 10 en el mapa real */
+#define TILES_MULT 10
+#define WALL_HIGH 1.0
+tcamara genera_mapa(int tilesX, int tilesY, char *recorrido) {
+    tcamara cam = {0,0,ALTURA_OJOS,0};
+    GLuint herbTex, sandTex;
+    int tamX = tilesX * TILES_MULT;
+    int tamY = tilesY * TILES_MULT;
+    int x,y,i,j,k; char c, c1; int cx, cy;
     double t,o;
     esc.mapa.xtiles = tamX;
     esc.mapa.ytiles = tamY;
     esc.mapa.alturas = (double*) malloc( tamX * tamY * sizeof(double));
+     
     int mx, my; double malt;
     // poner mapa a 0
     for(x = 0 ; x < tamX*tamY; x++) {
         esc.mapa.alturas[x] = 0;
     }
-    srand(montanyas);
-    // genera montañas aleatoriamente
-    for(i = 0 ; i < montanyas ; i++) {
-        mx = rand() % tamX; my = rand() % tamY;
-        malt = rand() % (int)((tamX+tamY)/DIV_ALT_MAX);
-        pon_montanya(mx,my,tamX,tamY,malt,esc.mapa.alturas);
-
+    // pone paredes
+    for(j = 0 ; j < tilesY ; j++) {
+        for(i = 0 ; i < tilesX ; i++) {
+            c = recorrido[i + j * tilesX];
+            cx = (i*TILES_MULT+TILES_MULT/2);
+            cy = (j*TILES_MULT+TILES_MULT/2);
+            if(c=='c' || c == 'C') {
+                cam.posX = cx+0.5;
+                cam.posY = cy+0.5;
+            } else if(c=='#') {
+                //esc.mapa.alturas[cx+cy*tamY] = WALL_HIGH;
+                for(k=0;k<TILES_MULT/2;k++){
+                    if(i < tilesX - 1 && recorrido[i+1 + j * tilesX] == '#') {
+                        esc.mapa.alturas[cx+k+cy*esc.mapa.xtiles] = 1;
+                    }
+                    if(i > 0 && recorrido[i-1 + j * tilesX] == '#') {
+                        esc.mapa.alturas[cx-1-k+cy*esc.mapa.xtiles] = 1;
+                    }
+                    if(j < tilesY - 1 && recorrido[i + (j+1) * tilesX] == '#') {
+                        esc.mapa.alturas[cx+(cy+k)*esc.mapa.xtiles] = 1;
+                    }
+                    if(j > 0 && recorrido[i + (j-1) * tilesX] == '#') {
+                        esc.mapa.alturas[cx+i+(cy-1-k)*esc.mapa.xtiles] = 1;
+                    }
+                    
+                }
+            }
+            //for(y = 0 ; y < TILES_MULT)
+        }
     }
-
 
     // calcular alturas mapa
  /*   for(y = 0 ; y < m.ytiles ; y++) {
@@ -426,6 +456,8 @@ void genera_mapa(int tamX, int tamY, int montanyas) {
     glDeleteTextures(1,&herbTex);
 	glDeleteTextures(1,&sandTex);
     glEndList();
+    
+    return cam;
 
 }
 
