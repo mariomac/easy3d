@@ -2,6 +2,7 @@
 
 #define VELOCIDAD 0.05
 #define VROTACION 0.11
+#define ALTURA_OJOS 0.5
 
 void main() {
     double siguienteX, siguienteY;
@@ -18,8 +19,9 @@ void main() {
         "#  ###   #"
         "#        #"
         " ######## "};
-    cam = genera_mapa(mapa);
-
+    cam = lee_mapa(mapa);
+    cam.posZ = ALTURA_OJOS;
+    
     siguienteX = cam.posX;
     siguienteY = cam.posY;
     while (!tecla_pulsada(TECLA_ESC)) {
@@ -30,19 +32,18 @@ void main() {
             cam.anguloX += VROTACION;
         }
         if (tecla_pulsada(TECLA_ARRIBA)) {
-            siguienteX = cam.posX + VELOCIDAD * sin(ventana.cam.anguloX);
-            siguienteY = cam.posY - VELOCIDAD * cos(ventana.cam.anguloX);
+            siguienteX = cam.posX + VELOCIDAD * sin(cam.anguloX);
+            siguienteY = cam.posY - VELOCIDAD * cos(cam.anguloX);
         }
         if (tecla_pulsada(TECLA_ABAJO)) {
-            siguienteX = cam.posX - VELOCIDAD * sin(ventana.cam.anguloX);
-            siguienteY = cam.posY + VELOCIDAD * cos(ventana.cam.anguloX);
+            siguienteX = cam.posX - VELOCIDAD * sin(cam.anguloX);
+            siguienteY = cam.posY + VELOCIDAD * cos(cam.anguloX);
         }
         if (que_hay_aqui(mapa, siguienteX, siguienteY) != PARED) {
             cam.posX = siguienteX;
             cam.posY = siguienteY;
         }
-        actualiza_camara(cam);
-        nuevo_fotograma();
+        muestra_fotograma(cam);
     }
 
     cierra_ventana();
