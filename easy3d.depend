@@ -1,0 +1,13 @@
+# depslib dependency file v1.0
+1387110292 source:/home/mmacias/easy3d/test.c
+	"easy3d.h"
+
+1387111083 /home/mmacias/easy3d/easy3d.h
+	<SDL2/SDL_opengl.h>
+	<SDL2/SDL.h>
+	<GL/gl.h>
+	<GL/glu.h>
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+

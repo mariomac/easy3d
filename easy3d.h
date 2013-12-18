@@ -39,6 +39,7 @@ typedef struct {
     SDL_Window *wnd;
     SDL_GLContext glctx;
     int teclas;
+    GLuint mlist; // lista de render del escenario
 } tventana;
 
 typedef struct {
@@ -46,15 +47,10 @@ typedef struct {
     char *paredes;
 } tmapa;
 
-typedef struct {
-    GLuint mlist;
-    tmapa mapa;
-} tescenario;
 
 void cubo(double lado, double cx, double cy, double cz);
 
 tventana ventana;
-tescenario esc = {-1};
 
 void abre_ventana() {
     //stderr = fopen("err.txt","w");
@@ -99,14 +95,6 @@ void abre_ventana() {
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
 
-    // Enable lighting
-    glEnable(GL_LIGHTING);
-    glEnable(GL_COLOR_MATERIAL);
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHT1);
-
-
     //glOrtho(-4, 4, -0.5, 4, 0.1, 1000.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -115,7 +103,6 @@ void abre_ventana() {
 void cierra_ventana() {
     SDL_DestroyWindow(ventana.wnd);
     SDL_Quit();
-    free(esc.mapa.paredes);
 }
 
 struct timespec startFrameTime = {0, 0};
@@ -143,20 +130,7 @@ void muestra_fotograma(tcamara cam) {
             0, 0, 1);
     // Multi-colored side - FRONT
 
-    GLfloat lightcol[] = {0.3, 0.3, 0.3, 0};
-    GLfloat ambient[] = {0.1, 0.1, 0.1, 0};
-
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-    glLightfv(GL_LIGHT1, GL_AMBIENT, ambient);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, lightcol);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, lightcol);
-    //glLightfv(GL_LIGHTn, GL_SPECULAR, lightcol );
-    GLfloat lightpos[] = {20, 10, 10, 0};
-    glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
-    GLfloat lightpos2[] = {-20, 10, 10, 0};
-    glLightfv(GL_LIGHT1, GL_POSITION, lightpos2);
-
-    glCallList(esc.mlist);
+    glCallList(ventana.mlist);
 
     glFlush();
 
@@ -242,15 +216,11 @@ tcamara lee_mapa(tmapa mapa) {
     char c, c1;
     int cx, cy;
     double t, o;
-    esc.mapa.xtiles = mapa.xtiles;
-    esc.mapa.ytiles = mapa.ytiles;
-    esc.mapa.paredes = (char*) malloc(mapa.xtiles * mapa.ytiles * sizeof (char));
 
     // calcular alturas mapa
     for (y = 0; y < mapa.ytiles; y++) {
         for (x = 0; x < mapa.xtiles; x++) {
             c = mapa.paredes[y * mapa.xtiles + x];
-            esc.mapa.paredes[y * mapa.xtiles + x] = c;
             if (c == 'p' || c == 'P') {
                 cam.posX = x + 0.5;
                 cam.posY = y + 0.5;
@@ -258,12 +228,12 @@ tcamara lee_mapa(tmapa mapa) {
         }
     }
 
-    if (esc.mlist != -1) {
-        glDeleteLists(esc.mlist, 1);
+    if (ventana.mlist != -1) {
+        glDeleteLists(ventana.mlist, 1);
     }
     // luego creamos mapa
-    esc.mlist = glGenLists(1);
-    glNewList(esc.mlist, GL_COMPILE);
+    ventana.mlist = glGenLists(1);
+    glNewList(ventana.mlist, GL_COMPILE);
 
 #define NN 0x0000
 #define G0 0x3330
@@ -377,7 +347,7 @@ tcamara lee_mapa(tmapa mapa) {
     // generar cubos mapa
     for (y = 0; y < mapa.ytiles; y++) {
         for (x = 0; x < mapa.xtiles; x++) {
-            c = que_hay_aqui(esc.mapa, x, y);
+            c = que_hay_aqui(mapa, x, y);
             if (c == PARED) {
                 t = TAM_TILE;
                 o = 0;
@@ -397,7 +367,7 @@ tcamara lee_mapa(tmapa mapa) {
                 //                    glVertex3f(x,y+TAM_TILE,t);
                 //                glEnd();
                 // left
-                c = que_hay_aqui(esc.mapa, x - 1, y);
+                c = que_hay_aqui(mapa, x - 1, y);
                 if (c != PARED) {
                     glEnable(GL_TEXTURE_2D);
                     glBindTexture(GL_TEXTURE_2D, ladrilloTex);
@@ -414,7 +384,7 @@ tcamara lee_mapa(tmapa mapa) {
                     glEnd();
                 }
                 // front
-                c = que_hay_aqui(esc.mapa, x, y + 1);
+                c = que_hay_aqui(mapa, x, y + 1);
                 if (c != PARED) {
                     glEnable(GL_TEXTURE_2D);
                     glBindTexture(GL_TEXTURE_2D, ladrilloTex);
@@ -431,7 +401,7 @@ tcamara lee_mapa(tmapa mapa) {
                     glEnd();
                 }
                 // right
-                c = que_hay_aqui(esc.mapa, x + 1, y);
+                c = que_hay_aqui(mapa, x + 1, y);
                 if (c != PARED) {
 
                     glEnable(GL_TEXTURE_2D);
@@ -449,7 +419,7 @@ tcamara lee_mapa(tmapa mapa) {
                     glEnd();
                 }
                 // back
-                c = que_hay_aqui(esc.mapa, x, y - 1);
+                c = que_hay_aqui(mapa, x, y - 1);
                 if (c != PARED) {
 
                     glEnable(GL_TEXTURE_2D);
