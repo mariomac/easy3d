@@ -23,7 +23,11 @@
 #define TECLA_DCHA 16
 
 #define TAM_TILE 1.0
-#define ALTURA_OJOS 1.8
+#define TAM_PATRON 0.2
+#define ALTURA_OJOS 0.5
+
+#define PARED '#'
+#define SUELO '0'
 
 typedef struct {
     double posX,posY,posZ;
@@ -40,7 +44,7 @@ typedef struct {
 
 typedef struct {
     int xtiles, ytiles;
-    double *alturas;
+    char *paredes;
 } tmapa;
 
 typedef struct {
@@ -95,7 +99,7 @@ void abre_ventana() {
     glViewport(0,0, ventana.ancho, ventana.alto);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(FOVY, (double)-ventana.ancho/(double)ventana.alto, 0.1, ZFAR);
+    gluPerspective(FOVY, (double)-ventana.ancho/(double)ventana.alto, 0.001, ZFAR);
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
@@ -116,7 +120,7 @@ void abre_ventana() {
 void cierra_ventana() {
 	SDL_DestroyWindow(ventana.wnd);
 	SDL_Quit();
-	free(esc.mapa.alturas);
+	free(esc.mapa.paredes);
 }
 
 struct timespec startFrameTime = {0,0};
@@ -226,78 +230,38 @@ int tecla_pulsada(int tecla) {
 	return ventana.teclas & tecla;
 }
 
-double get_altura_terreno(double x, double y) {
+char que_hay_aqui(tmapa mapa, double x, double y) {
     int xx = (int) x;
     int yy = (int) y;
-    if(xx >= 0 && xx < esc.mapa.xtiles && yy >= 0 && yy < esc.mapa.ytiles) {
-        return esc.mapa.alturas[yy * esc.mapa.xtiles + xx];
+    if(xx >= 0 && xx < mapa.xtiles && yy >= 0 && yy < mapa.ytiles) {
+        return mapa.paredes[yy * mapa.xtiles + xx];
     } else {
-        return 0;
+        return PARED;
     }
 }
 
 /* las tiles multiplican por 10 en el mapa real */
-#define TILES_MULT 10
 #define WALL_HIGH 1.0
-tcamara genera_mapa(int tilesX, int tilesY, char *recorrido) {
+tcamara genera_mapa(tmapa mapa) {
     tcamara cam = {0,0,ALTURA_OJOS,0};
-    GLuint herbTex, sandTex;
-    int tamX = tilesX * TILES_MULT;
-    int tamY = tilesY * TILES_MULT;
+    GLuint sueloTex, ladrilloTex, techoTex;
     int x,y,i,j,k; char c, c1; int cx, cy;
     double t,o;
-    esc.mapa.xtiles = tamX;
-    esc.mapa.ytiles = tamY;
-    esc.mapa.alturas = (double*) malloc( tamX * tamY * sizeof(double));
+    esc.mapa.xtiles = mapa.xtiles;
+    esc.mapa.ytiles = mapa.ytiles;
+    esc.mapa.paredes = (char*) malloc( mapa.xtiles * mapa.ytiles * sizeof(char));
      
-    int mx, my; double malt;
-    // poner mapa a 0
-    for(x = 0 ; x < tamX*tamY; x++) {
-        esc.mapa.alturas[x] = 0;
-    }
-    // pone paredes
-    for(j = 0 ; j < tilesY ; j++) {
-        for(i = 0 ; i < tilesX ; i++) {
-            c = recorrido[i + j * tilesX];
-            cx = (i*TILES_MULT+TILES_MULT/2);
-            cy = (j*TILES_MULT+TILES_MULT/2);
-            if(c=='c' || c == 'C') {
-                cam.posX = cx+0.5;
-                cam.posY = cy+0.5;
-            } else if(c=='#') {
-                //esc.mapa.alturas[cx+cy*tamY] = WALL_HIGH;
-                for(k=0;k<TILES_MULT/2;k++){
-                    if(i < tilesX - 1 && recorrido[i+1 + j * tilesX] == '#') {
-                        esc.mapa.alturas[cx+k+cy*esc.mapa.xtiles] = 1;
-                    }
-                    if(i > 0 && recorrido[i-1 + j * tilesX] == '#') {
-                        esc.mapa.alturas[cx-1-k+cy*esc.mapa.xtiles] = 1;
-                    }
-                    if(j < tilesY - 1 && recorrido[i + (j+1) * tilesX] == '#') {
-                        esc.mapa.alturas[cx+(cy+k)*esc.mapa.xtiles] = 1;
-                    }
-                    if(j > 0 && recorrido[i + (j-1) * tilesX] == '#') {
-                        esc.mapa.alturas[cx+i+(cy-1-k)*esc.mapa.xtiles] = 1;
-                    }
-                    
-                }
-            }
-            //for(y = 0 ; y < TILES_MULT)
-        }
-    }
-
     // calcular alturas mapa
- /*   for(y = 0 ; y < m.ytiles ; y++) {
-        for(x = 0 ; x < m.xtiles ; x++) {
-            c = m.tiles[y * m.xtiles + x];
-            if(c >= '1' && c <= '9') {
-                esc.mapa.alturas[y * m.xtiles + x] = c - '0';
-            } else {
-                esc.mapa.alturas[y * m.xtiles + x] = 0;
+    for(y = 0 ; y < mapa.ytiles ; y++) {
+        for(x = 0 ; x < mapa.xtiles ; x++) {
+            c  = mapa.paredes[y * mapa.xtiles + x];
+            esc.mapa.paredes[y * mapa.xtiles + x] = c;
+            if(c == 'p' || c == 'P') {
+                cam.posX = x + 0.5;
+                cam.posY = y + 0.5;
             }
         }
     }
-*/
 
     if(esc.mlist != -1) {
         glDeleteLists(esc.mlist,1);
@@ -306,145 +270,197 @@ tcamara genera_mapa(int tilesX, int tilesY, char *recorrido) {
     esc.mlist = glGenLists(1);
     glNewList(esc.mlist,GL_COMPILE);
 
-
+#define NN 0x0000
+#define G0 0x3330
+#define G1 0x6660
+#define G2 0xaaa0
     //generar texturas
     int width = 8;
     int height = 8;
-    unsigned short herb[] = {
-    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
-    	0x800,0x800,0x800,0x800,0x800,0xf00,0x800,0x800,
-    	0x800,0xf00,0x800,0x800,0x800,0x800,0x800,0x800,
-    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
-    	0x800,0x800,0x800,0xf00,0x800,0x800,0xf00,0x800,
-    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
-    	0x800,0x800,0x800,0x800,0x800,0xf00,0x800,0x800,
-    	0x800,0x800,0x800,0x800,0x800,0x800,0x800,0x800,
+    unsigned short suelo[] = {
+    	NN,NN,G0,G0,G0,G0,G0,NN,
+        NN,G0,G2,G2,G1,G1,G1,G0,
+        G0,G2,G2,G1,G1,G1,G1,G1,
+        G0,G2,G1,G1,G1,G1,G1,G1,
+        G0,G1,G1,G1,G1,G1,G1,G1,
+        G0,G1,G1,G1,G1,G1,G1,G1,
+        G0,G1,G1,G1,G1,G1,G1,G1,
+        NN,G0,G1,G1,G1,G1,G1,G0,
     };
-    glGenTextures(1,&herbTex);
-    glBindTexture(GL_TEXTURE_2D, herbTex);
+    glGenTextures(1,&sueloTex);
+    glBindTexture(GL_TEXTURE_2D, sueloTex);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, herb);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, suelo);
 
-    unsigned short sand[] = {
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xa610,0xda50,0xda50,0xa610,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xa610,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xa610,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
-    	0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,0xda50,
+#define R0 0x3100
+#define R1 0x6210
+#define R2 0xa420
+    unsigned short ladrillo[] = {
+    	NN,NN,NN,NN,NN,NN,NN,NN,
+    	NN,R2,R2,R1,R1,R1,R1,R1,
+    	NN,R2,R1,R1,R1,R1,R1,R0,
+    	NN,R1,R1,R1,R1,R1,R0,R0,
+    	NN,NN,NN,NN,NN,NN,NN,NN,
+    	R1,R1,R1,R0,NN,R2,R2,R1,
+    	R1,R1,R1,R0,NN,R2,R1,R1,
+    	R1,R1,R0,R0,NN,R1,R1,R1,
     };
 
-    glGenTextures(1,&sandTex);
-    glBindTexture(GL_TEXTURE_2D, sandTex);
+    glGenTextures(1,&ladrilloTex);
+    glBindTexture(GL_TEXTURE_2D, ladrilloTex);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, sand);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ladrillo);
 
+#define Y1 0xec00
+#define Y2 0xfd10
+    int tsize = 16;
+     unsigned short techo[] = {
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,Y1,Y1,Y1,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,Y1,Y2,Y2,Y2,Y1,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,Y1,Y2,Y2,Y2,Y1,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,Y1,Y2,Y2,Y2,Y1,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,Y1,Y1,Y1,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,
+         G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,G0,         
+    };
+
+    glGenTextures(1,&techoTex);
+    glBindTexture(GL_TEXTURE_2D, techoTex);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, techo);
 
     glColor3f(1,1,1);
+    //techo
 	// suelo
                 glEnable( GL_TEXTURE_2D );
-    			glBindTexture( GL_TEXTURE_2D, herbTex );
+    			glBindTexture( GL_TEXTURE_2D, techoTex );
+
+    glBegin(GL_POLYGON);
+        glNormal3f(0,0,1);
+        glTexCoord2d(0,mapa.ytiles);	glVertex3f(0,mapa.ytiles,TAM_TILE);
+        glTexCoord2d(mapa.xtiles,mapa.ytiles); glVertex3f(mapa.xtiles,mapa.ytiles,TAM_TILE);
+        glTexCoord2d(mapa.xtiles,0);	glVertex3f(mapa.xtiles,0,TAM_TILE);
+        glTexCoord2d(0,0); 		glVertex3f(0,0,TAM_TILE);
+         
+    glEnd();
+    
+	// suelo
+                glEnable( GL_TEXTURE_2D );
+    			glBindTexture( GL_TEXTURE_2D, sueloTex );
 
     glBegin(GL_POLYGON);
         glNormal3f(0,0,1);
         glTexCoord2d(0,0); 			glVertex3f(0,0,0);
-        glTexCoord2d(tamX,0);	glVertex3f(tamX,0,0);
-        glTexCoord2d(tamX,tamY); glVertex3f(tamX,tamY,0);
-        glTexCoord2d(0,tamY);	glVertex3f(0,tamY,0);
+        glTexCoord2d(mapa.xtiles/TAM_PATRON,0);	glVertex3f(mapa.xtiles,0,0);
+        glTexCoord2d(mapa.xtiles/TAM_PATRON,mapa.ytiles/TAM_PATRON); glVertex3f(mapa.xtiles,mapa.ytiles,0);
+        glTexCoord2d(0,mapa.ytiles/TAM_PATRON);	glVertex3f(0,mapa.ytiles,0);
     glEnd();
 
     // generar cubos mapa
-    for(y = 0 ; y < tamY ; y++) {
-        for(x = 0 ; x < tamX ; x++) {
-            t = get_altura_terreno(x,y);
-            if(t>0) {
+    for(y = 0 ; y < mapa.ytiles ; y++) {
+        for(x = 0 ; x < mapa.xtiles ; x++) {
+            c = que_hay_aqui(esc.mapa,x,y);
+            if(c==PARED) {
+                t = TAM_TILE;
+                o = 0;
                 // top
-                glEnable( GL_TEXTURE_2D );
-    			glBindTexture( GL_TEXTURE_2D, herbTex );
-                glBegin(GL_POLYGON);
-
-                    glNormal3f(0,0,1);
-                    glTexCoord2d(0,0);
-                    glVertex3f(x,y,t);
-                    glTexCoord2d(1,0);
-                    glVertex3f(x+TAM_TILE,y,t);
-                    glTexCoord2d(1,1);
-                    glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
-                    glTexCoord2d(0,1);
-                    glVertex3f(x,y+TAM_TILE,t);
-                glEnd();
+//                glEnable( GL_TEXTURE_2D );
+//    			glBindTexture( GL_TEXTURE_2D, sueloTex );
+//                glBegin(GL_POLYGON);
+//
+//                    glNormal3f(0,0,1);
+//                    glTexCoord2d(0,0);
+//                    glVertex3f(x,y,t);
+//                    glTexCoord2d(1/TAM_PATRON,0);
+//                    glVertex3f(x+TAM_TILE,y,t);
+//                    glTexCoord2d(1/TAM_PATRON,1/TAM_PATRON);
+//                    glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
+//                    glTexCoord2d(0,1/TAM_PATRON);
+//                    glVertex3f(x,y+TAM_TILE,t);
+//                glEnd();
                 // left
-                o = get_altura_terreno(x-1,y);
-                if(o < t) {
+                c = que_hay_aqui(esc.mapa,x-1,y);
+                if(c!=PARED) {
                 glEnable( GL_TEXTURE_2D );
-    			glBindTexture( GL_TEXTURE_2D, sandTex );
+    			glBindTexture( GL_TEXTURE_2D, ladrilloTex );
                     glBegin(GL_POLYGON);
                         glNormal3f(-1,0,0);
                         glTexCoord2d(0,0);
                         glVertex3f(x,y,t);
-                        glTexCoord2d(1,0);
+                        glTexCoord2d(1/TAM_PATRON,0);
                         glVertex3f(x,y+TAM_TILE,t);
-                        glTexCoord2d(1,1*(t-o));
+                        glTexCoord2d(1/TAM_PATRON,1*(t-o)/TAM_PATRON);
                         glVertex3f(x,y+TAM_TILE,o);
-                        glTexCoord2d(0,1*(t-o));
+                        glTexCoord2d(0,1*(t-o)/TAM_PATRON);
                         glVertex3f(x,y,o);
                     glEnd();
                 }
                 // front
-                o = get_altura_terreno(x,y+1);
-                if(o < t) {
+                c = que_hay_aqui(esc.mapa,x,y+1);
+                if(c!=PARED) {
                 glEnable( GL_TEXTURE_2D );
-    			glBindTexture( GL_TEXTURE_2D, sandTex );
+    			glBindTexture( GL_TEXTURE_2D, ladrilloTex );
                     glBegin(GL_POLYGON);
                         glNormal3f(0,1,0);
                         glTexCoord2d(0,0);
                         glVertex3f(x,y+TAM_TILE,t);
-                        glTexCoord2d(1,0);
+                        glTexCoord2d(1/TAM_PATRON,0);
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
-                        glTexCoord2d(1,1*(t-o));
+                        glTexCoord2d(1/TAM_PATRON,1*(t-o)/TAM_PATRON);
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,o);
-                        glTexCoord2d(0,1*(t-o));
+                        glTexCoord2d(0,1*(t-o)/TAM_PATRON);
                         glVertex3f(x,y+TAM_TILE,o);
                     glEnd();
                 }
                 // right
-                o = get_altura_terreno(x+1,y);
-                if(o < t) {
+                c = que_hay_aqui(esc.mapa,x+1,y);
+                if(c!=PARED) {
+
                 glEnable( GL_TEXTURE_2D );
-    			glBindTexture( GL_TEXTURE_2D, sandTex );
+    			glBindTexture( GL_TEXTURE_2D, ladrilloTex );
                     glBegin(GL_POLYGON);
                         glNormal3f(1,0,0);
                         glTexCoord2d(0,0);
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,t);
-                        glTexCoord2d(1,0);
+                        glTexCoord2d(1/TAM_PATRON,0);
                         glVertex3f(x+TAM_TILE,y,t);
-                        glTexCoord2d(1,1*(t-o));
+                        glTexCoord2d(1/TAM_PATRON,1*(t-o)/TAM_PATRON);
                         glVertex3f(x+TAM_TILE,y,o);
-                        glTexCoord2d(0,1*(t-o));
+                        glTexCoord2d(0,1*(t-o)/TAM_PATRON);
                         glVertex3f(x+TAM_TILE,y+TAM_TILE,o);
                     glEnd();
                 }
                 // back
-                o = get_altura_terreno(x,y-1);
-                if(o < t) {
+                c = que_hay_aqui(esc.mapa,x,y-1);
+                if(c!=PARED) {
+
                 glEnable( GL_TEXTURE_2D );
-    			glBindTexture( GL_TEXTURE_2D, sandTex );
+    			glBindTexture( GL_TEXTURE_2D, ladrilloTex );
                     glBegin(GL_POLYGON);
                         glNormal3f(0,-1,0);
                         glTexCoord2d(0,0);
                         glVertex3f(x+TAM_TILE,y,t);
 
-                        glTexCoord2d(1,0);
+                        glTexCoord2d(1/TAM_PATRON,0);
                         glVertex3f(x,y,t);
-                        glTexCoord2d(1,1*(t-o));
+                        glTexCoord2d(1/TAM_PATRON,1*(t-o)/TAM_PATRON);
                         glVertex3f(x,y,o);
-                        glTexCoord2d(0,1*(t-o));
+                        glTexCoord2d(0,1*(t-o)/TAM_PATRON);
                         glVertex3f(x+TAM_TILE,y,o);
                     glEnd();
                 }
@@ -452,8 +468,9 @@ tcamara genera_mapa(int tilesX, int tilesY, char *recorrido) {
         }
     }
 
-    glDeleteTextures(1,&herbTex);
-	glDeleteTextures(1,&sandTex);
+    glDeleteTextures(1,&sueloTex);
+	glDeleteTextures(1,&ladrilloTex);
+        glDeleteTextures(1,&techoTex);
     glEndList();
     
     return cam;
