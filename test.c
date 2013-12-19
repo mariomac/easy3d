@@ -22,9 +22,11 @@ void main() {
     cam = lee_mapa(mapa);
     cam.posZ = ALTURA_OJOS;
     
+    int x = 0;
     siguienteX = cam.posX;
     siguienteY = cam.posY;
     while (!tecla_pulsada(TECLA_ESC)) {
+        ventana.consola.bytes[x++] = 0xffff;
         if (tecla_pulsada(TECLA_IZDA)) {
             cam.anguloX -= VROTACION;
         }

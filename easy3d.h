@@ -9,13 +9,15 @@
 #include<stdlib.h>
 #include<math.h>
 #include<time.h>
+#include"bitmaps.h"
 
 #define ZNEAR 0.0001
 #define ZFAR 50
 
+#define TRANSP 0x0005
 #define FOVY 60
 
-#define FPS 30.0
+#define FPS 3.0
 
 #define TECLA_ESC 0b1
 #define TECLA_ARRIBA 2
@@ -36,21 +38,33 @@ typedef struct {
 
 typedef struct {
     int ancho, alto;
+    unsigned char *bytes;
+} tmapa;
+
+typedef struct {
+    GLuint textura;
+    tmapa fuente;
+    int width;
+    int height;
+    unsigned short *bytes;
+} tconsola;
+typedef struct {
+    int ancho, alto;
     SDL_Window *wnd;
     SDL_GLContext glctx;
     int teclas;
-    GLuint mlist; // lista de render del escenario
+    tconsola consola;
 } tventana;
 
 typedef struct {
-    int xtiles, ytiles;
-    char *paredes;
-} tmapa;
-
+    GLuint mlist;
+    tmapa mapa;
+} tescenario;
 
 void cubo(double lado, double cx, double cy, double cz);
 
-tventana ventana;
+static tventana ventana;
+static tescenario esc = {-1};
 
 void abre_ventana() {
     //stderr = fopen("err.txt","w");
@@ -95,14 +109,36 @@ void abre_ventana() {
     glFrontFace(GL_CW);
     glCullFace(GL_BACK);
 
+    // inicializar consola
+    ventana.consola.width = ventana.ancho;
+    ventana.consola.height = ventana.alto/4;
+    ventana.consola.bytes = (short*) malloc(256*256 * sizeof(short));
+    int i;
+    for(i = 0 ; i < 256*256 ; i++) {
+        ventana.consola.bytes[i] = TRANSP;
+    }
+    
+    glGenTextures(1,&ventana.consola.textura);
+    
+    glBindTexture(GL_TEXTURE_2D, ventana.consola.textura);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ventana.consola.bytes);
+    
     //glOrtho(-4, 4, -0.5, 4, 0.1, 1000.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    //glMatrixMode(GL_MODELVIEW);
+    //glLoadIdentity();
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void cierra_ventana() {
     SDL_DestroyWindow(ventana.wnd);
     SDL_Quit();
+    glDeleteTextures(1,&ventana.consola.textura);
+    free(esc.mapa.bytes);
+    free(ventana.consola.bytes);
 }
 
 struct timespec startFrameTime = {0, 0};
@@ -121,17 +157,44 @@ void muestra_fotograma(tcamara cam) {
 
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
+               
     gluLookAt(cam.posX, cam.posY, cam.posZ,
             cam.posX + sin(cam.anguloX),
             cam.posY - cos(cam.anguloX),
             cam.posZ,
             0, 0, 1);
     // Multi-colored side - FRONT
+    glCallList(esc.mlist);
 
-    glCallList(ventana.mlist);
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0,ventana.consola.width,ventana.consola.height,0,-1,1);
+    glMatrixMode(GL_MODELVIEW);
 
+    glBindTexture(GL_TEXTURE_2D,ventana.consola.textura);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sueloWidth, sueloHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ventana.consola.bytes);
+
+    glBegin(GL_QUADS);
+    glTexCoord2d(0,0);
+    glVertex2f(0,0);
+    glTexCoord2d(ventana.consola.width,0);
+    glVertex2f(ventana.consola.width,0);
+    glTexCoord2d(ventana.consola.width,ventana.consola.height);
+    glVertex2f(ventana.consola.width,ventana.consola.height);
+    glTexCoord2d(0,ventana.consola.height);
+    glVertex2f(0,ventana.consola.height);
+    glEnd();
+    
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    
+    
+        
     glFlush();
 
     SDL_GL_SwapWindow(ventana.wnd);
@@ -199,8 +262,8 @@ int tecla_pulsada(int tecla) {
 char que_hay_aqui(tmapa mapa, double x, double y) {
     int xx = (int) x;
     int yy = (int) y;
-    if (xx >= 0 && xx < mapa.xtiles && yy >= 0 && yy < mapa.ytiles) {
-        return mapa.paredes[yy * mapa.xtiles + xx];
+    if (xx >= 0 && xx < mapa.ancho && yy >= 0 && yy < mapa.alto) {
+        return mapa.bytes[yy * mapa.ancho + xx];
     } else {
         return PARED;
     }
@@ -216,11 +279,15 @@ tcamara lee_mapa(tmapa mapa) {
     char c, c1;
     int cx, cy;
     double t, o;
+    esc.mapa.ancho = mapa.ancho;
+    esc.mapa.alto = mapa.alto;
+    esc.mapa.bytes = (char*) malloc(mapa.ancho * mapa.alto * sizeof (char));
 
     // calcular alturas mapa
-    for (y = 0; y < mapa.ytiles; y++) {
-        for (x = 0; x < mapa.xtiles; x++) {
-            c = mapa.paredes[y * mapa.xtiles + x];
+    for (y = 0; y < mapa.alto; y++) {
+        for (x = 0; x < mapa.ancho; x++) {
+            c = mapa.bytes[y * mapa.ancho + x];
+            esc.mapa.bytes[y * mapa.ancho + x] = c;
             if (c == 'p' || c == 'P') {
                 cam.posX = x + 0.5;
                 cam.posY = y + 0.5;
@@ -228,79 +295,28 @@ tcamara lee_mapa(tmapa mapa) {
         }
     }
 
-    if (ventana.mlist != -1) {
-        glDeleteLists(ventana.mlist, 1);
+    if (esc.mlist != -1) {
+        glDeleteLists(esc.mlist, 1);
     }
     // luego creamos mapa
-    ventana.mlist = glGenLists(1);
-    glNewList(ventana.mlist, GL_COMPILE);
+    esc.mlist = glGenLists(1);
+    glNewList(esc.mlist, GL_COMPILE);
 
-#define NN 0x0000
-#define G0 0x3330
-#define G1 0x6660
-#define G2 0xaaa0
+
     //generar texturas
-    int width = 8;
-    int height = 8;
-    unsigned short suelo[] = {
-        NN, NN, G0, G0, G0, G0, G0, NN,
-        NN, G0, G2, G2, G1, G1, G1, G0,
-        G0, G2, G2, G1, G1, G1, G1, G1,
-        G0, G2, G1, G1, G1, G1, G1, G1,
-        G0, G1, G1, G1, G1, G1, G1, G1,
-        G0, G1, G1, G1, G1, G1, G1, G1,
-        G0, G1, G1, G1, G1, G1, G1, G1,
-        NN, G0, G1, G1, G1, G1, G1, G0,
-    };
     glGenTextures(1, &sueloTex);
     glBindTexture(GL_TEXTURE_2D, sueloTex);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, suelo);
-
-#define R0 0x3100
-#define R1 0x6210
-#define R2 0xa420
-    unsigned short ladrillo[] = {
-        NN, NN, NN, NN, NN, NN, NN, NN,
-        NN, R2, R2, R1, R1, R1, R1, R1,
-        NN, R2, R1, R1, R1, R1, R1, R0,
-        NN, R1, R1, R1, R1, R1, R0, R0,
-        NN, NN, NN, NN, NN, NN, NN, NN,
-        R1, R1, R1, R0, NN, R2, R2, R1,
-        R1, R1, R1, R0, NN, R2, R1, R1,
-        R1, R1, R0, R0, NN, R1, R1, R1,
-    };
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sueloWidth, sueloHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, sueloBitmap);
 
     glGenTextures(1, &ladrilloTex);
     glBindTexture(GL_TEXTURE_2D, ladrilloTex);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ladrillo);
-
-#define Y1 0xec00
-#define Y2 0xfd10
-    int tsize = 16;
-    unsigned short techo[] = {
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, Y1, Y1, Y1, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, Y1, Y2, Y2, Y2, Y1, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, Y1, Y2, Y2, Y2, Y1, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, Y1, Y2, Y2, Y2, Y1, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, Y1, Y1, Y1, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-        G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0, G0,
-    };
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sueloWidth, sueloHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ladrilloBitmap);
 
     glGenTextures(1, &techoTex);
     glBindTexture(GL_TEXTURE_2D, techoTex);
@@ -317,12 +333,12 @@ tcamara lee_mapa(tmapa mapa) {
 
     glBegin(GL_POLYGON);
     glNormal3f(0, 0, 1);
-    glTexCoord2d(0, mapa.ytiles);
-    glVertex3f(0, mapa.ytiles, TAM_TILE);
-    glTexCoord2d(mapa.xtiles, mapa.ytiles);
-    glVertex3f(mapa.xtiles, mapa.ytiles, TAM_TILE);
-    glTexCoord2d(mapa.xtiles, 0);
-    glVertex3f(mapa.xtiles, 0, TAM_TILE);
+    glTexCoord2d(0, mapa.alto);
+    glVertex3f(0, mapa.alto, TAM_TILE);
+    glTexCoord2d(mapa.ancho, mapa.alto);
+    glVertex3f(mapa.ancho, mapa.alto, TAM_TILE);
+    glTexCoord2d(mapa.ancho, 0);
+    glVertex3f(mapa.ancho, 0, TAM_TILE);
     glTexCoord2d(0, 0);
     glVertex3f(0, 0, TAM_TILE);
 
@@ -336,18 +352,18 @@ tcamara lee_mapa(tmapa mapa) {
     glNormal3f(0, 0, 1);
     glTexCoord2d(0, 0);
     glVertex3f(0, 0, 0);
-    glTexCoord2d(mapa.xtiles / TAM_PATRON, 0);
-    glVertex3f(mapa.xtiles, 0, 0);
-    glTexCoord2d(mapa.xtiles / TAM_PATRON, mapa.ytiles / TAM_PATRON);
-    glVertex3f(mapa.xtiles, mapa.ytiles, 0);
-    glTexCoord2d(0, mapa.ytiles / TAM_PATRON);
-    glVertex3f(0, mapa.ytiles, 0);
+    glTexCoord2d(mapa.ancho / TAM_PATRON, 0);
+    glVertex3f(mapa.ancho, 0, 0);
+    glTexCoord2d(mapa.ancho / TAM_PATRON, mapa.alto / TAM_PATRON);
+    glVertex3f(mapa.ancho, mapa.alto, 0);
+    glTexCoord2d(0, mapa.alto / TAM_PATRON);
+    glVertex3f(0, mapa.alto, 0);
     glEnd();
 
     // generar cubos mapa
-    for (y = 0; y < mapa.ytiles; y++) {
-        for (x = 0; x < mapa.xtiles; x++) {
-            c = que_hay_aqui(mapa, x, y);
+    for (y = 0; y < mapa.alto; y++) {
+        for (x = 0; x < mapa.ancho; x++) {
+            c = que_hay_aqui(esc.mapa, x, y);
             if (c == PARED) {
                 t = TAM_TILE;
                 o = 0;
@@ -367,7 +383,7 @@ tcamara lee_mapa(tmapa mapa) {
                 //                    glVertex3f(x,y+TAM_TILE,t);
                 //                glEnd();
                 // left
-                c = que_hay_aqui(mapa, x - 1, y);
+                c = que_hay_aqui(esc.mapa, x - 1, y);
                 if (c != PARED) {
                     glEnable(GL_TEXTURE_2D);
                     glBindTexture(GL_TEXTURE_2D, ladrilloTex);
@@ -384,7 +400,7 @@ tcamara lee_mapa(tmapa mapa) {
                     glEnd();
                 }
                 // front
-                c = que_hay_aqui(mapa, x, y + 1);
+                c = que_hay_aqui(esc.mapa, x, y + 1);
                 if (c != PARED) {
                     glEnable(GL_TEXTURE_2D);
                     glBindTexture(GL_TEXTURE_2D, ladrilloTex);
@@ -401,7 +417,7 @@ tcamara lee_mapa(tmapa mapa) {
                     glEnd();
                 }
                 // right
-                c = que_hay_aqui(mapa, x + 1, y);
+                c = que_hay_aqui(esc.mapa, x + 1, y);
                 if (c != PARED) {
 
                     glEnable(GL_TEXTURE_2D);
@@ -419,7 +435,7 @@ tcamara lee_mapa(tmapa mapa) {
                     glEnd();
                 }
                 // back
-                c = que_hay_aqui(mapa, x, y - 1);
+                c = que_hay_aqui(esc.mapa, x, y - 1);
                 if (c != PARED) {
 
                     glEnable(GL_TEXTURE_2D);
@@ -447,8 +463,9 @@ tcamara lee_mapa(tmapa mapa) {
     glEndList();
 
     return cam;
-
 }
+
+
 
 #endif
 
