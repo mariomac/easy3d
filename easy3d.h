@@ -10,14 +10,14 @@
 #include<math.h>
 #include<time.h>
 #include"bitmaps.h"
+#include "consola.h"
 
 #define ZNEAR 0.0001
 #define ZFAR 50
 
-#define TRANSP 0x0005
 #define FOVY 60
 
-#define FPS 3.0
+#define FPS 30.0
 
 #define TECLA_ESC 0b1
 #define TECLA_ARRIBA 2
@@ -41,13 +41,6 @@ typedef struct {
     unsigned char *bytes;
 } tmapa;
 
-typedef struct {
-    GLuint textura;
-    tmapa fuente;
-    int width;
-    int height;
-    unsigned short *bytes;
-} tconsola;
 typedef struct {
     int ancho, alto;
     SDL_Window *wnd;
@@ -110,13 +103,11 @@ void abre_ventana() {
     glCullFace(GL_BACK);
 
     // inicializar consola
-    ventana.consola.width = ventana.ancho;
-    ventana.consola.height = ventana.alto/4;
-    ventana.consola.bytes = (short*) malloc(256*256 * sizeof(short));
-    int i;
-    for(i = 0 ; i < 256*256 ; i++) {
-        ventana.consola.bytes[i] = TRANSP;
-    }
+    inicia_consola(ventana.ancho/FACTOR_ESCALA_CONSOLA, ventana.alto*ALTO_CONSOLA/FACTOR_ESCALA_CONSOLA, &ventana.consola);
+
+//    escribe_char(' ',&ventana.consola);
+//    escribe_char(' ',&ventana.consola);
+//    escribe_char(' ',&ventana.consola);
     
     glGenTextures(1,&ventana.consola.textura);
     
@@ -124,8 +115,9 @@ void abre_ventana() {
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ventana.consola.bytes);
-    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ventana.consola.width, ventana.consola.height,
+            0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ventana.consola.bytes);
+   
     //glOrtho(-4, 4, -0.5, 4, 0.1, 1000.0);
     //glMatrixMode(GL_MODELVIEW);
     //glLoadIdentity();
@@ -138,7 +130,7 @@ void cierra_ventana() {
     SDL_Quit();
     glDeleteTextures(1,&ventana.consola.textura);
     free(esc.mapa.bytes);
-    free(ventana.consola.bytes);
+    destruye_consola(&ventana.consola);
 }
 
 struct timespec startFrameTime = {0, 0};
@@ -173,27 +165,26 @@ void muestra_fotograma(tcamara cam) {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    glOrtho(0,ventana.consola.width,ventana.consola.height,0,-1,1);
+    glOrtho(0,ventana.ancho,ventana.alto,0,-1,1);
     glMatrixMode(GL_MODELVIEW);
 
     glBindTexture(GL_TEXTURE_2D,ventana.consola.textura);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sueloWidth, sueloHeight, 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ventana.consola.bytes);
-
+    //glTexImage2D()
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ventana.consola.width,ventana.consola.height,
+                        GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, ventana.consola.bytes);
     glBegin(GL_QUADS);
     glTexCoord2d(0,0);
     glVertex2f(0,0);
-    glTexCoord2d(ventana.consola.width,0);
-    glVertex2f(ventana.consola.width,0);
-    glTexCoord2d(ventana.consola.width,ventana.consola.height);
-    glVertex2f(ventana.consola.width,ventana.consola.height);
-    glTexCoord2d(0,ventana.consola.height);
-    glVertex2f(0,ventana.consola.height);
+    glTexCoord2d(1,0);
+    glVertex2f(ventana.ancho,0);
+    glTexCoord2d(1,1);
+    glVertex2f(ventana.ancho, ventana.alto*ALTO_CONSOLA);
+    glTexCoord2d(0,1);
+    glVertex2f(0,ventana.alto*ALTO_CONSOLA);
     glEnd();
     
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
-    
-    
         
     glFlush();
 

@@ -1,4 +1,5 @@
 #include "easy3d.h"
+#include "consola.h"
 
 #define VELOCIDAD 0.05
 #define VROTACION 0.11
@@ -25,8 +26,15 @@ void main() {
     int x = 0;
     siguienteX = cam.posX;
     siguienteY = cam.posY;
+    short color = 0;
+    
+    escribe_char('a',&ventana.consola);
+    escribe_char('B',&ventana.consola);
+    escribe_char('1',&ventana.consola);
+    escribe_char(':',&ventana.consola);
+     escribe_char(' ',&ventana.consola);
+   
     while (!tecla_pulsada(TECLA_ESC)) {
-        ventana.consola.bytes[x++] = 0xffff;
         if (tecla_pulsada(TECLA_IZDA)) {
             cam.anguloX -= VROTACION;
         }
