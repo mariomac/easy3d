@@ -17,7 +17,7 @@
 #define COLOR_VERDE 0x0f0f
 #define COLOR_AMARILLO 0xff0f
 
-#define FACTOR_ESCALA_CONSOLA 1
+#define FACTOR_ESCALA_CONSOLA 2
 #define ALTO_CONSOLA 0.25
 
 typedef struct {

@@ -31,6 +31,7 @@ void main() {
     printf("*** Bienvenido ***\n");
    
     while (!tecla_pulsada(TECLA_ESC)) {
+        printf("msg: %d\n",color++);
         if (tecla_pulsada(TECLA_IZDA)) {
             cam.anguloX -= VROTACION;
         }

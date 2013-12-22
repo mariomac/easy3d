@@ -1,4 +1,5 @@
 #include<GL/gl.h>
+#include<string.h>
 #include<stdlib.h>
 #include<stdio.h>
 #include<fcntl.h>
@@ -37,6 +38,17 @@ void limpia_consola(tconsola *con) {
     }    
 }
 
+void scroll_up(tconsola *con, int pixels) {
+    memcpy(con->bytes, &(con->bytes[pixels*con->width]), (con->height-pixels)*con->width*sizeof(short));
+//    int x, y;
+//    for(y = 0 ; y < con->height - pixels ; y++) {
+//        for(x = 0 ; x < con->width ; x++) {
+//            con->bytes[x+y*con->width] = con->bytes[x+(y+pixels)*con->width];
+//        }
+//    }
+    
+}
+
 void actualiza_output(tconsola *con) {
     struct pollfd fd;
     fd.fd = con->pipefd[0];
@@ -65,7 +77,12 @@ void escribe_char(tconsola *con, char ch) {
     if(ch=='\n' || con->cursorX + CHARW > con->width) {
         con->cursorX = 0;
         con->cursorY += CHARH;
-    } else if(ch >= INIT_CHAR && ch <= END_CHAR ) {
+        if(con->cursorY+CHARH > con->height) {
+            scroll_up(con, con->cursorY+CHARH-con->height);
+            con->cursorY = con->height - CHARH;
+        }
+    }
+    if(ch >= INIT_CHAR && ch <= END_CHAR ) {
         charsPerLine=FBMPW/CHARW;
         ch -= INIT_CHAR;
         srcy = (ch / charsPerLine) * CHARH;
