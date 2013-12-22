@@ -15,7 +15,7 @@
 #define COLOR_ROJO 0xf00f
 #define COLOR_AZUL 0x00ff
 #define COLOR_VERDE 0x0f0f
-#define COLOR_AMARILLO 0x0fff
+#define COLOR_AMARILLO 0xff0f
 
 #define FACTOR_ESCALA_CONSOLA 2
 #define ALTO_CONSOLA 0.25

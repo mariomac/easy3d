@@ -8,7 +8,7 @@ void inicia_consola(int ancho, int alto, tconsola *con) {
     con->width = ancho;
     con->height = alto;
     con->bytes = (short*) malloc(ancho*alto * sizeof(short));
-    con->color = COLOR_AMARILLO;
+    con->color = COLOR_BLANCO;
     limpia_consola(con);
 }
 
@@ -47,7 +47,7 @@ void escribe_char(char ch, tconsola *con) {
         ch -= INIT_CHAR;
         srcy = (ch / charsPerLine) * CHARH;
         for(y=0;y<CHARH;y++) {
-            srcx = ((ch * CHARW) / 8) % FBMPH;
+            srcx = ((ch * CHARW) / 8) % charsPerLine;
             for(x=0;x<CHARW;x++){
                 if(x%8==0){
                     line=fontBitmap[srcx+srcy*charsPerLine * CHARW / 8];

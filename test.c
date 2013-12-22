@@ -29,10 +29,10 @@ void main() {
     short color = 0;
     
     escribe_char('a',&ventana.consola);
-    escribe_char('B',&ventana.consola);
-    escribe_char('1',&ventana.consola);
-    escribe_char(':',&ventana.consola);
-     escribe_char(' ',&ventana.consola);
+    escribe_char('b',&ventana.consola);
+    escribe_char('A',&ventana.consola);
+    escribe_char('C',&ventana.consola);
+     escribe_char('z',&ventana.consola);
    
     while (!tecla_pulsada(TECLA_ESC)) {
         if (tecla_pulsada(TECLA_IZDA)) {
