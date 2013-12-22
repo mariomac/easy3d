@@ -60,7 +60,7 @@ static tventana ventana;
 static tescenario esc = {-1};
 
 void abre_ventana() {
-    //stderr = fopen("err.txt","w");
+    stderr = fopen("err.txt","w");
     fprintf(stderr, "ATENCION: este archivo solo esta para pillar algunos mensajes del sistema."
             " Ignoralos si no sabes que quieren decir\n");
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) == -1) {
@@ -168,6 +168,7 @@ void muestra_fotograma(tcamara cam) {
     glOrtho(0,ventana.ancho,ventana.alto,0,-1,1);
     glMatrixMode(GL_MODELVIEW);
 
+    actualiza_output(&ventana.consola);
     glBindTexture(GL_TEXTURE_2D,ventana.consola.textura);
     //glTexImage2D()
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ventana.consola.width,ventana.consola.height,

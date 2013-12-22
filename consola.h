@@ -17,7 +17,7 @@
 #define COLOR_VERDE 0x0f0f
 #define COLOR_AMARILLO 0xff0f
 
-#define FACTOR_ESCALA_CONSOLA 2
+#define FACTOR_ESCALA_CONSOLA 1
 #define ALTO_CONSOLA 0.25
 
 typedef struct {
@@ -28,12 +28,15 @@ typedef struct {
     int cursorY;
     short color;
     unsigned short *bytes;
+    int pipefd[2];
 } tconsola;
 
+void actualiza_output(tconsola *con);
 void inicia_consola(int ancho, int alto, tconsola *con);
 void destruye_consola(tconsola *con);
-void escribe_char(char ch, tconsola *con);
+void escribe_char(tconsola *con, char ch);
 void limpia_consola(tconsola *con);
+void escribe_texto(tconsola *con, char *txt);
 
 #endif	/* CONSOLA_H */
 

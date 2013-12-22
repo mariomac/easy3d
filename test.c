@@ -28,11 +28,7 @@ void main() {
     siguienteY = cam.posY;
     short color = 0;
     
-    escribe_char('a',&ventana.consola);
-    escribe_char('b',&ventana.consola);
-    escribe_char('A',&ventana.consola);
-    escribe_char('C',&ventana.consola);
-     escribe_char('z',&ventana.consola);
+    printf("*** Bienvenido ***\n");
    
     while (!tecla_pulsada(TECLA_ESC)) {
         if (tecla_pulsada(TECLA_IZDA)) {
@@ -52,6 +48,8 @@ void main() {
         if (que_hay_aqui(mapa, siguienteX, siguienteY) != PARED) {
             cam.posX = siguienteX;
             cam.posY = siguienteY;
+        } else {
+            printf("no puedes pasar\n");
         }
         muestra_fotograma(cam);
     }
