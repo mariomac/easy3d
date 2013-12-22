@@ -40,6 +40,11 @@ void limpia_consola(tconsola *con) {
 
 void scroll_up(tconsola *con, int pixels) {
     memcpy(con->bytes, &(con->bytes[pixels*con->width]), (con->height-pixels)*con->width*sizeof(short));
+    int i;
+    for(i = (con->height-pixels)*con->width ; i < con->height * con->width ; i++) {
+        con->bytes[i] = CON_BG;
+    }
+    
 //    int x, y;
 //    for(y = 0 ; y < con->height - pixels ; y++) {
 //        for(x = 0 ; x < con->width ; x++) {
@@ -77,11 +82,11 @@ void escribe_char(tconsola *con, char ch) {
     if(ch=='\n' || con->cursorX + CHARW > con->width) {
         con->cursorX = 0;
         con->cursorY += CHARH;
-        if(con->cursorY+CHARH > con->height) {
-            scroll_up(con, con->cursorY+CHARH-con->height);
-            con->cursorY = con->height - CHARH;
-        }
     }
+    if(ch != '\n' && con->cursorY+CHARH > con->height) {
+        scroll_up(con, con->cursorY+CHARH-con->height);
+        con->cursorY = con->height - CHARH;
+    }    
     if(ch >= INIT_CHAR && ch <= END_CHAR ) {
         charsPerLine=FBMPW/CHARW;
         ch -= INIT_CHAR;

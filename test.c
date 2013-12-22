@@ -31,7 +31,7 @@ void main() {
     printf("*** Bienvenido ***\n");
    
     while (!tecla_pulsada(TECLA_ESC)) {
-        printf("msg: %d\n",color++);
+        
         if (tecla_pulsada(TECLA_IZDA)) {
             cam.anguloX -= VROTACION;
         }
@@ -46,9 +46,15 @@ void main() {
             siguienteX = cam.posX - VELOCIDAD * sin(cam.anguloX);
             siguienteY = cam.posY + VELOCIDAD * cos(cam.anguloX);
         }
+        if(color%2==0)
+        printf("algo largo%d\n",color);
+        else printf("msg: %d\n",color);
+        color++;
+        
         if (que_hay_aqui(mapa, siguienteX, siguienteY) != PARED) {
             cam.posX = siguienteX;
             cam.posY = siguienteY;
+            
         } else {
             printf("no puedes pasar\n");
         }
