@@ -1,6 +1,7 @@
 #ifndef BITMAPS_H
 #define BITMAPS_H
 
+
 // textura del suelo
 #define NN 0x000f
 #define G0 0x333f
