@@ -3,8 +3,8 @@
 
 #include<SDL2/SDL_opengl.h>
 #include<SDL2/SDL.h>
-#include<GL/gl.h>
-#include<GL/glu.h>
+#include<OpenGL/gl.h>
+#include<OpenGL/glu.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
@@ -211,7 +211,7 @@ void muestra_fotograma(tcamara cam) {
                     ventana.teclas |= TECLA_DCHA;
                     break;
             }
-        } else if (event.type = SDL_KEYUP) {
+        } else if (event.type == SDL_KEYUP) {
             switch (event.key.keysym.sym) {
                 case SDLK_ESCAPE:
                     ventana.teclas &= ~TECLA_ESC;
