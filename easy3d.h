@@ -3,8 +3,10 @@
 
 #include<SDL2/SDL_opengl.h>
 #include<SDL2/SDL.h>
-#include<OpenGL/gl.h>
-#include<OpenGL/glu.h>
+
+#include<GL/gl.h>
+#include<GL/glu.h>
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
