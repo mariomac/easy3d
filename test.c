@@ -30,7 +30,7 @@ void main() {
     
     printf("*** Welcome ***\n");
     printf("You can print into this console with standard printf\n");
-   
+    
     while (!tecla_pulsada(TECLA_ESC)) {
         
         if (tecla_pulsada(TECLA_IZDA)) {
@@ -54,6 +54,13 @@ void main() {
             cam.posY = siguienteY;          
         }
         muestra_fotograma(cam);
+        if(x == 0) {
+            printf("escribe algo: ");
+            //scanf("%d",&x);
+            printf("color=%d\n",x);
+            x = 1;
+        }
+
     }
 
     cierra_ventana();

@@ -1,4 +1,4 @@
-#include<OpenGL/gl.h>
+#include<GL/gl.h>
 #include<string.h>
 #include<stdlib.h>
 #include<stdio.h>
@@ -17,19 +17,17 @@ void inicia_consola(int ancho, int alto, tconsola *con) {
     limpia_consola(con);
     // pipes unix console stdout to this console
     printf("\r"); // por alguna extraña razon, la consola no funciona si no hago el pipe con algo en el buffer
-    pipe(con->pipefd);
-    dup2(con->pipefd[1],1); // redirect stdout
+    pipe(con->stdout);
+    dup2(con->stdout[1],1); // redirect stdout
     
-    // TODO: redirect stdin to handle keys
-    /*
-    pipe(pipefd);
-	dup2(pipefd[0],0);
-
-	write(pipefd[1],"123 456 789\n",12);
-	*/
-
+    // pipes console process to stdin
+    pipe(con->stdin);
+    dup2(con->stdin[0],0);//write(pipefd[1],"123 456 789\n",12);
 }
 
+void input_char(tconsola *con, char c) {
+    write(con->stdin[1],&c,1);
+}
 void limpia_consola(tconsola *con) {
     int i; unsigned char p; int pi = 0;
     for (i = 0; i < con->width*con->height; i++) {
@@ -64,14 +62,14 @@ void scroll_up(tconsola *con, int pixels) {
 
 void actualiza_output(tconsola *con) {
     struct pollfd fd;
-    fd.fd = con->pipefd[0];
+    fd.fd = con->stdout[0];
     fd.events = POLLIN | POLLPRI;
     
     
     char reading_buf[1];
     int res;
     while ( (res = poll(&fd,1,0)) != 0) {
-        read(con->pipefd[0], reading_buf, 1);
+        read(con->stdout[0], reading_buf, 1);
         escribe_char(con, reading_buf[0]);
     }
 }
@@ -91,7 +89,7 @@ void escribe_char(tconsola *con, char ch) {
         con->cursorX = 0;
         con->cursorY += CHARH;
     }
-    if(ch != '\n' && con->cursorY+CHARH > con->height) {
+    if(con->cursorY+CHARH > con->height) {
         scroll_up(con, con->cursorY+CHARH-con->height);
         con->cursorY = con->height - CHARH;
     }    

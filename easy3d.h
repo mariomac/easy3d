@@ -192,6 +192,8 @@ void muestra_fotograma(tcamara cam) {
     glFlush();
 
     SDL_GL_SwapWindow(ventana.wnd);
+    
+    //printf("hola\n");
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -212,6 +214,18 @@ void muestra_fotograma(tcamara cam) {
                 case SDLK_RIGHT:
                     ventana.teclas |= TECLA_DCHA;
                     break;
+                case SDLK_RETURN:
+                case SDLK_RETURN2:
+                    input_char(&ventana.consola,'\n');
+                    printf("\n"); fflush(stdout);
+                    break;
+                default:
+                    if(event.key.keysym.sym >= SDLK_a && 
+                            event.key.keysym.sym <= SDLK_z) {
+                        char c = 'a'+event.key.keysym.sym - SDLK_a;
+                        input_char(&ventana.consola,c);                        
+                        printf("%c",c);fflush(stdout);
+                    }                    
             }
         } else if (event.type == SDL_KEYUP) {
             switch (event.key.keysym.sym) {

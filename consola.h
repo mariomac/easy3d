@@ -28,7 +28,8 @@ typedef struct {
     int cursorY;
     short color;
     unsigned short *bytes;
-    int pipefd[2];
+    int stdout[2];
+    int stdin[2];
 } tconsola;
 
 void actualiza_output(tconsola *con);
@@ -38,5 +39,6 @@ void escribe_char(tconsola *con, char ch);
 void limpia_consola(tconsola *con);
 void escribe_texto(tconsola *con, char *txt);
 
+void input_char(tconsola *con, char c);
 #endif	/* CONSOLA_H */
 
