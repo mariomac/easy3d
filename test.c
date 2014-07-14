@@ -28,7 +28,8 @@ void main() {
     siguienteY = cam.posY;
     short color = 0;
     
-    printf("*** Bienvenido ***\n");
+    printf("*** Welcome ***\n");
+    printf("You can print into this console with standard printf\n");
    
     while (!tecla_pulsada(TECLA_ESC)) {
         
@@ -46,6 +47,7 @@ void main() {
             siguienteX = cam.posX - VELOCIDAD * sin(cam.anguloX);
             siguienteY = cam.posY + VELOCIDAD * cos(cam.anguloX);
         }
+        color++;
         
         if (que_hay_aqui(mapa, siguienteX, siguienteY) != PARED) {
             cam.posX = siguienteX;
