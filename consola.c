@@ -19,6 +19,14 @@ void inicia_consola(int ancho, int alto, tconsola *con) {
     printf("\r"); // por alguna extraña razon, la consola no funciona si no hago el pipe con algo en el buffer
     pipe(con->pipefd);
     dup2(con->pipefd[1],1); // redirect stdout
+    
+    // TODO: redirect stdin to handle keys
+    /*
+    pipe(pipefd);
+	dup2(pipefd[0],0);
+
+	write(pipefd[1],"123 456 789\n",12);
+	*/
 
 }
 
